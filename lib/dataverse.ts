@@ -45,7 +45,8 @@ const FIELD_MAP = {
   id: "cr6df_sgsw_digitalisierungsvorhabenid", // Primary Key (GUID)
   title: "cr6df_name",
   description: "cr6df_beschreibung",
-  submittedBy: "cr6df_ideengeber",
+  submittedBy: "_createdby_value", // Lookup-Feld, gibt GUID zurück
+  submittedByName: "_createdby_value@OData.Community.Display.V1.FormattedValue", // Anzeigename
   type: "cr6df_typ",
   status: "cr6df_lifecyclestatus",
   createdOn: "createdon",
@@ -81,8 +82,11 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
   const rawStatus = record[FIELD_MAP.status] as string | undefined;
   const status: IdeaStatus = isValidStatus(rawStatus) ? rawStatus : "Eingereicht";
 
-  // submittedBy kann leer sein, dann "Unbekannt" anzeigen
-  const submittedBy = (record[FIELD_MAP.submittedBy] as string) || "Unbekannt";
+  // submittedBy: Zuerst formatierten Namen probieren, dann GUID, dann Fallback
+  const submittedBy = 
+    (record[FIELD_MAP.submittedByName] as string) || 
+    (record[FIELD_MAP.submittedBy] as string) || 
+    "Unbekannt";
 
   return {
     id: record[FIELD_MAP.id] as string,
@@ -235,11 +239,12 @@ export async function createIdea(
 
   const url = `${DATAVERSE_URL}/api/data/v9.2/${TABLE_NAME}`;
 
+  // Nur editierbare Felder senden
+  // createdby wird automatisch von Dataverse gesetzt (aktueller User des Tokens)
   const body = {
     [FIELD_MAP.title]: input.title,
     [FIELD_MAP.description]: input.description,
-    [FIELD_MAP.submittedBy]: submittedBy,
-    // Status und Typ werden vom System gesetzt
+    // submittedBy wird NICHT gesendet - Dataverse setzt createdby automatisch
   };
 
   const response = await fetch(url, {
@@ -249,7 +254,17 @@ export async function createIdea(
   });
 
   if (!response.ok) {
-    throw new Error(`Dataverse Fehler: ${response.status} ${response.statusText}`);
+    // Versuche, Details aus dem Response-Body zu lesen
+    let errorDetails = "";
+    try {
+      const errorBody = await response.json();
+      errorDetails = errorBody?.error?.message || JSON.stringify(errorBody);
+    } catch {
+      errorDetails = await response.text().catch(() => "Keine Details verfügbar");
+    }
+    
+    console.error("Dataverse Create Error:", { status: response.status, details: errorDetails });
+    throw new Error(`Dataverse ${response.status}: ${errorDetails}`);
   }
 
   // Dataverse gibt die ID im Header zurück
@@ -257,11 +272,13 @@ export async function createIdea(
   const idMatch = locationHeader?.match(/\(([^)]+)\)/);
   const newId = idMatch?.[1] || crypto.randomUUID();
 
+  // submittedBy wird von Dataverse automatisch auf den Token-User gesetzt
+  // Wir verwenden den übergebenen Namen nur für die Rückgabe
   return {
     id: newId,
     title: input.title,
     description: input.description,
-    submittedBy,
+    submittedBy, // Der Mock-User-Name (in Dataverse steht der Token-User)
     status: "Eingereicht",
     createdOn: new Date().toISOString(),
   };
