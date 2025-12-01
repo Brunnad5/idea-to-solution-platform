@@ -321,6 +321,7 @@ export async function createIdea(
       title: input.title,
       description: input.description,
       submittedBy,
+      type: "Idee", // Default-Typ
       status: "eingereicht",
       createdOn: new Date().toISOString(),
     };
@@ -333,6 +334,7 @@ export async function createIdea(
   const body = {
     [FIELD_MAP.title]: input.title,
     [FIELD_MAP.description]: input.description,
+    [FIELD_MAP.type]: 562520000, // Default-Typ: "Idee" (numerischer Wert für Dataverse OptionSet)
     // submittedBy wird NICHT gesendet - Dataverse setzt createdby automatisch
   };
 
@@ -368,6 +370,7 @@ export async function createIdea(
     title: input.title,
     description: input.description,
     submittedBy, // Der Mock-User-Name (in Dataverse steht der Token-User)
+    type: "Idee", // Default-Typ
     status: "eingereicht",
     createdOn: new Date().toISOString(),
   };

@@ -36,7 +36,7 @@ export default function RootLayout({
   // Script das vor dem Rendern das Theme aus localStorage lädt (verhindert Flash)
   const themeScript = `
     (function() {
-      const theme = localStorage.getItem('theme') || 'corporate';
+      const theme = localStorage.getItem('theme') || 'light';
       document.documentElement.setAttribute('data-theme', theme);
     })();
   `;
@@ -47,7 +47,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-base-200`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-base-100`}
       >
         <Providers>
           {/* Navigation auf allen Seiten */}

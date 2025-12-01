@@ -11,8 +11,8 @@ import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 
 // Verfügbare Themes
-const LIGHT_THEME = "corporate";
-const DARK_THEME = "business";
+const LIGHT_THEME = "light";
+const DARK_THEME = "dark";
 
 export default function ThemeSwitcher() {
   const [isDark, setIsDark] = useState(false);
@@ -22,24 +22,31 @@ export default function ThemeSwitcher() {
   useEffect(() => {
     setMounted(true);
     const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === DARK_THEME) {
-      setIsDark(true);
-      document.documentElement.setAttribute("data-theme", DARK_THEME);
-    }
+    const currentTheme = document.documentElement.getAttribute("data-theme");
+    setIsDark(savedTheme === DARK_THEME || currentTheme === DARK_THEME);
   }, []);
 
   // Theme wechseln
-  const toggleTheme = () => {
-    const newTheme = isDark ? LIGHT_THEME : DARK_THEME;
-    setIsDark(!isDark);
+  const handleClick = () => {
+    const newIsDark = !isDark;
+    const newTheme = newIsDark ? DARK_THEME : LIGHT_THEME;
+    
+    // State aktualisieren
+    setIsDark(newIsDark);
+    
+    // Theme im DOM setzen
     document.documentElement.setAttribute("data-theme", newTheme);
+    
+    // Im localStorage speichern
     localStorage.setItem("theme", newTheme);
+    
+    console.log("Theme gewechselt zu:", newTheme);
   };
 
   // Während SSR nichts rendern (verhindert Hydration-Mismatch)
   if (!mounted) {
     return (
-      <button className="btn btn-ghost btn-sm btn-circle">
+      <button className="btn btn-ghost btn-sm btn-circle" aria-label="Theme wechseln">
         <Sun className="h-4 w-4" />
       </button>
     );
@@ -47,8 +54,10 @@ export default function ThemeSwitcher() {
 
   return (
     <button
-      onClick={toggleTheme}
+      type="button"
+      onClick={handleClick}
       className="btn btn-ghost btn-sm btn-circle"
+      aria-label={isDark ? "Helles Design aktivieren" : "Dunkles Design aktivieren"}
       title={isDark ? "Helles Design" : "Dunkles Design"}
     >
       {isDark ? (
