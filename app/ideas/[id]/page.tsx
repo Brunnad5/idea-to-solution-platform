@@ -14,12 +14,18 @@ import {
   ArrowLeft, 
   Calendar, 
   Check,
+  ChevronDown,
+  ClipboardCheck,
   Clock, 
+  Gauge,
   Lightbulb, 
+  MessageSquare,
+  Shield,
   Tag, 
   User,
   XCircle
 } from "lucide-react";
+import { Idea } from "@/lib/validators";
 
 // Hilfsfunktion: Datum formatieren
 function formatDate(dateString: string): string {
@@ -140,6 +146,133 @@ function ProcessTimeline({ currentStatus }: { currentStatus: IdeaStatus }) {
   );
 }
 
+// Status-Werte, die anzeigen, dass die Initialprüfung abgeschlossen ist
+const INITIAL_REVIEW_COMPLETED_STATUSES: IdeaStatus[] = [
+  "initialgeprüft",
+  "in Überarbeitung",
+  "in Detailanalyse",
+  "zur Genehmigung",
+  "genehmigt",
+  "in Planung",
+  "in Umsetzung",
+  "umgesetzt",
+  "abgelehnt",
+];
+
+// Einklappbarer Abschnitt - Client Component nicht nötig, da wir details/summary verwenden
+function CollapsibleSection({ 
+  title, 
+  icon, 
+  children,
+  defaultOpen = false 
+}: { 
+  title: string; 
+  icon: React.ReactNode; 
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details className="collapse collapse-arrow bg-base-200 rounded-lg" open={defaultOpen}>
+      <summary className="collapse-title font-medium flex items-center gap-2 cursor-pointer">
+        {icon}
+        {title}
+      </summary>
+      <div className="collapse-content">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+// Initialprüfungs-Abschnitt
+function InitialReviewSection({ idea }: { idea: Idea }) {
+  // Prüfen ob Initialprüfung abgeschlossen
+  const hasInitialReview = INITIAL_REVIEW_COMPLETED_STATUSES.includes(idea.status);
+  
+  if (!hasInitialReview) {
+    return null;
+  }
+
+  // Datum formatieren (nur Datum, keine Zeit)
+  const formatReviewDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("de-CH", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  return (
+    <CollapsibleSection 
+      title="Initialprüfung" 
+      icon={<ClipboardCheck className="h-5 w-5 text-info" />}
+      defaultOpen={true}
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+        {/* Komplexität */}
+        {idea.complexity && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <Gauge className="h-5 w-5 text-base-content/60" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Komplexität</p>
+              <p className="font-medium">{idea.complexity}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Kritikalität */}
+        {idea.criticality && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <Shield className="h-5 w-5 text-base-content/60" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Kritikalität</p>
+              <p className="font-medium">{idea.criticality}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Geprüft am */}
+        {idea.initialReviewDate && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <Calendar className="h-5 w-5 text-base-content/60" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Geprüft am</p>
+              <p className="font-medium">{formatReviewDate(idea.initialReviewDate)}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Begründung (volle Breite) */}
+      {idea.initialReviewReason && (
+        <div className="mt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageSquare className="h-4 w-4 text-base-content/60" />
+            <p className="text-xs text-base-content/60">Begründung</p>
+          </div>
+          <p className="text-sm bg-base-100 p-3 rounded-lg whitespace-pre-wrap">
+            {idea.initialReviewReason}
+          </p>
+        </div>
+      )}
+
+      {/* Fallback wenn keine Daten */}
+      {!idea.complexity && !idea.criticality && !idea.initialReviewDate && !idea.initialReviewReason && (
+        <p className="text-sm text-base-content/50 italic pt-2">
+          Keine Details zur Initialprüfung verfügbar.
+        </p>
+      )}
+    </CollapsibleSection>
+  );
+}
+
 // Props für die Seite (Next.js App Router)
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -193,6 +326,12 @@ export default async function IdeaDetailPage({ params }: PageProps) {
 
           {/* Timeline */}
           <ProcessTimeline currentStatus={idea.status} />
+
+          {/* Zusätzliche Abschnitte (einklappbar) */}
+          <div className="mt-6 space-y-4">
+            {/* Initialprüfung */}
+            <InitialReviewSection idea={idea} />
+          </div>
 
           {/* Divider */}
           <div className="divider"></div>

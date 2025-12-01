@@ -131,7 +131,7 @@ export default function IdeaFilters({ ideas, onFilteredIdeasChange }: IdeaFilter
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/50" />
           <input
             type="text"
-            placeholder="Suche nach Titel, Beschreibung oder Person..."
+            placeholder="Suchen..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input input-bordered w-full pl-10"
@@ -240,7 +240,8 @@ export default function IdeaFilters({ ideas, onFilteredIdeasChange }: IdeaFilter
         {activeFilterCount > 0 && (
           <button onClick={clearAllFilters} className="btn btn-sm btn-ghost text-error gap-1">
             <X className="h-3 w-3" />
-            Filter zurücksetzen
+            <span className="hidden sm:inline">Filter zurücksetzen</span>
+            <span className="sm:hidden">Zurücksetzen</span>
           </button>
         )}
       </div>

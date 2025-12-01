@@ -80,6 +80,12 @@ export const ideaSchema = z.object({
   status: ideaStatusSchema, // Aktueller Lifecycle-Status
   createdOn: z.string().datetime(), // Erstellungsdatum (ISO-String)
   modifiedOn: z.string().datetime().optional(), // Letztes Änderungsdatum
+
+  // Initialprüfung (ab Status "initialgeprüft")
+  initialReviewReason: z.string().optional(), // Begründung der Initialbewertung
+  complexity: z.string().optional(), // Komplexität
+  criticality: z.string().optional(), // Kritikalität
+  initialReviewDate: z.string().optional(), // Datum der Initialprüfung
 });
 
 // ============================================

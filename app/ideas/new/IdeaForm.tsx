@@ -120,29 +120,31 @@ export default function IdeaForm() {
         </label>
       </div>
 
-      {/* Submit-Button */}
-      <div className="flex justify-end gap-4">
+      {/* Submit-Buttons */}
+      <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-4">
         <button
           type="button"
-          className="btn btn-ghost"
+          className="btn btn-ghost btn-sm sm:btn-md"
           onClick={() => router.back()}
         >
           Abbrechen
         </button>
         <button
           type="submit"
-          className="btn btn-primary gap-2"
+          className="btn btn-primary btn-sm sm:btn-md gap-2"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Wird eingereicht...
+              <span className="hidden sm:inline">Wird eingereicht...</span>
+              <span className="sm:hidden">Lädt...</span>
             </>
           ) : (
             <>
               <Send className="h-4 w-4" />
-              Idee einreichen
+              <span className="hidden sm:inline">Idee einreichen</span>
+              <span className="sm:hidden">Einreichen</span>
             </>
           )}
         </button>

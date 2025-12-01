@@ -56,6 +56,11 @@ const FIELD_MAP = {
   status: "cr6df_lifecyclestatus",
   createdOn: "createdon",
   modifiedOn: "modifiedon",
+  // Initialprüfung
+  initialReviewReason: "cr6df_initalbewertung_begruendung",
+  complexity: "cr6df_komplexitaet",
+  criticality: "cr6df_kritikalitaet",
+  initialReviewDate: "cr6df_initialgeprueft_am",
 } as const;
 
 /**
@@ -142,6 +147,14 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
   // Typ: Numerischen Wert in lesbaren String umwandeln
   const type = mapTypeValue(record[FIELD_MAP.type]);
 
+  // Initialprüfungs-Felder (können OptionSets sein, daher FormattedValue verwenden)
+  const initialReviewReason = record[FIELD_MAP.initialReviewReason] as string | undefined;
+  const complexity = record[`${FIELD_MAP.complexity}@OData.Community.Display.V1.FormattedValue`] as string | undefined
+    || record[FIELD_MAP.complexity] as string | undefined;
+  const criticality = record[`${FIELD_MAP.criticality}@OData.Community.Display.V1.FormattedValue`] as string | undefined
+    || record[FIELD_MAP.criticality] as string | undefined;
+  const initialReviewDate = record[FIELD_MAP.initialReviewDate] as string | undefined;
+
   return {
     id: record[FIELD_MAP.id] as string,
     title: record[FIELD_MAP.title] as string,
@@ -152,6 +165,11 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
     status,
     createdOn: record[FIELD_MAP.createdOn] as string,
     modifiedOn: record[FIELD_MAP.modifiedOn] as string | undefined,
+    // Initialprüfung
+    initialReviewReason,
+    complexity,
+    criticality,
+    initialReviewDate,
   };
 }
 

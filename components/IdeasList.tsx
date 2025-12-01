@@ -68,19 +68,23 @@ function StatusBadge({ status }: { status: string }) {
 function IdeaCard({ idea }: { idea: Idea }) {
   return (
     <Link href={`/ideas/${idea.id}`} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
-      <div className="card-body">
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="card-title text-lg">{idea.title}</h2>
+      <div className="card-body p-4 sm:p-6">
+        {/* Status oben rechts */}
+        <div className="flex justify-end mb-1">
           <StatusBadge status={idea.status} />
         </div>
-        <p className="text-base-content/70 line-clamp-2">{idea.description}</p>
-        <div className="flex flex-wrap gap-4 mt-2 text-sm text-base-content/60">
+        {/* Titel */}
+        <h2 className="card-title text-base sm:text-lg line-clamp-2">{idea.title}</h2>
+        {/* Beschreibung */}
+        <p className="text-base-content/70 text-sm line-clamp-2">{idea.description}</p>
+        {/* Meta-Infos */}
+        <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-base-content/60">
           <span className="flex items-center gap-1">
-            <User className="h-4 w-4" />
-            {idea.submittedBy}
+            <User className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="truncate max-w-[100px] sm:max-w-none">{idea.submittedBy}</span>
           </span>
           <span className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
             {formatDate(idea.createdOn)}
           </span>
         </div>

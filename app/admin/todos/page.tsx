@@ -193,27 +193,27 @@ function TodoCard({ item }: { item: TodoItem }) {
 
   return (
     <div className="card bg-base-100 shadow-sm border border-base-300">
-      <div className="card-body py-4">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="card-title text-base">{item.title}</h3>
-          <div className="flex gap-2">
-            <span className={`badge ${config.badge}`}>{item.priority}</span>
-            {categoryIcon && (
-              <span className="badge badge-ghost gap-1">
-                {categoryIcon}
-                {item.category}
-              </span>
-            )}
-          </div>
+      <div className="card-body p-4 sm:py-4">
+        {/* Badges oben */}
+        <div className="flex flex-wrap gap-2 mb-2">
+          <span className={`badge ${config.badge}`}>{item.priority}</span>
+          {categoryIcon && (
+            <span className="badge badge-ghost gap-1">
+              {categoryIcon}
+              <span className="hidden sm:inline">{item.category}</span>
+            </span>
+          )}
         </div>
+        
+        {/* Titel */}
+        <h3 className="card-title text-sm sm:text-base">{item.title}</h3>
 
         {/* Beschreibung */}
-        <p className="text-base-content/70 text-sm">{item.description}</p>
+        <p className="text-base-content/70 text-xs sm:text-sm">{item.description}</p>
 
         {/* Details */}
         {item.details && item.details.length > 0 && (
-          <div className="mt-2 p-3 bg-base-200 rounded-lg">
+          <div className="mt-2 p-2 sm:p-3 bg-base-200 rounded-lg">
             <p className="text-xs font-medium mb-1 text-base-content/60">Details:</p>
             <ul className="list-disc list-inside space-y-1 text-xs text-base-content/70">
               {item.details.map((detail, i) => (
