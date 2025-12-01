@@ -11,6 +11,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Lightbulb, Menu, Plus } from "lucide-react";
 import UserMenu from "./UserMenu";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -83,9 +84,10 @@ export default function Navbar() {
         </ul>
       </div>
 
-      {/* Rechter Bereich: User-Info */}
+      {/* Rechter Bereich: Theme-Switch & User-Info */}
       <div className="navbar-end">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <ThemeSwitcher />
           <UserMenu />
           <div className="badge badge-ghost badge-sm hidden md:flex">
             Prototyp
