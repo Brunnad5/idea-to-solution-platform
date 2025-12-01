@@ -33,8 +33,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Script das vor dem Rendern das Theme aus localStorage lädt (verhindert Flash)
+  const themeScript = `
+    (function() {
+      const theme = localStorage.getItem('theme') || 'corporate';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  `;
+
   return (
-    <html lang="de" data-theme="corporate">
+    <html lang="de" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-base-200`}
       >
