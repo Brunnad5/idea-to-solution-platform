@@ -46,12 +46,16 @@ function formatDate(dateString: string): string {
 // Hilfsfunktion: Status-Badge mit passender Farbe
 function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    Eingereicht: "badge-info",
-    "In Prüfung": "badge-warning",
-    Genehmigt: "badge-success",
-    "In Umsetzung": "badge-primary",
-    Abgeschlossen: "badge-neutral",
-    Abgelehnt: "badge-error",
+    "eingereicht": "badge-info",
+    "initialgeprüft": "badge-info",
+    "in Überarbeitung": "badge-warning",
+    "in Detailanalyse": "badge-warning",
+    "zur Genehmigung": "badge-warning",
+    "genehmigt": "badge-success",
+    "in Planung": "badge-primary",
+    "in Umsetzung": "badge-primary",
+    "umgesetzt": "badge-neutral",
+    "abgelehnt": "badge-error",
   };
   const colorClass = colorMap[status] || "badge-ghost";
   return <span className={`badge ${colorClass}`}>{status}</span>;

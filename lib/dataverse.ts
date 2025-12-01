@@ -99,9 +99,8 @@ function createHeaders(): HeadersInit {
  * @param record - Rohdaten aus Dataverse
  */
 function mapDataverseToIdea(record: Record<string, unknown>): Idea {
-  // Status aus Dataverse holen, oder Default "Eingereicht" verwenden
-  const rawStatus = record[FIELD_MAP.status] as string | undefined;
-  const status: IdeaStatus = isValidStatus(rawStatus) ? rawStatus : "Eingereicht";
+  // Status aus Dataverse holen (numerisch oder string)
+  const status = mapStatusValue(record[FIELD_MAP.status]);
 
   // submittedBy: Zuerst formatierten Namen probieren, dann GUID, dann Fallback
   const submittedBy = 
@@ -124,17 +123,49 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
   };
 }
 
+/**
+ * Mapping für das Status-Feld (OptionSet/Choice in Dataverse).
+ * Die Werte sind numerisch in Dataverse gespeichert.
+ */
+const STATUS_MAP: Record<number, IdeaStatus> = {
+  562520000: "eingereicht",
+  562520001: "initialgeprüft",
+  562520002: "in Überarbeitung",
+  562520009: "in Detailanalyse",
+  562520003: "zur Genehmigung",
+  562520004: "genehmigt",
+  562520005: "in Planung",
+  562520006: "in Umsetzung",
+  562520007: "umgesetzt",
+  562520008: "abgelehnt",
+};
+
+/** Wandelt den numerischen Status-Wert in einen lesbaren String um */
+function mapStatusValue(value: unknown): IdeaStatus {
+  if (typeof value === "number" && value in STATUS_MAP) {
+    return STATUS_MAP[value];
+  }
+  if (typeof value === "string" && isValidStatus(value)) {
+    return value;
+  }
+  return "eingereicht"; // Default
+}
+
 /** Prüft, ob ein String ein gültiger IdeaStatus ist */
 function isValidStatus(value: unknown): value is IdeaStatus {
-  const validStatuses = [
-    "Eingereicht",
-    "In Prüfung",
-    "Genehmigt",
-    "In Umsetzung",
-    "Abgeschlossen",
-    "Abgelehnt",
+  const validStatuses: IdeaStatus[] = [
+    "eingereicht",
+    "initialgeprüft",
+    "in Überarbeitung",
+    "in Detailanalyse",
+    "zur Genehmigung",
+    "genehmigt",
+    "in Planung",
+    "in Umsetzung",
+    "umgesetzt",
+    "abgelehnt",
   ];
-  return typeof value === "string" && validStatuses.includes(value);
+  return typeof value === "string" && validStatuses.includes(value as IdeaStatus);
 }
 
 /**
@@ -256,7 +287,7 @@ export async function createIdea(
       title: input.title,
       description: input.description,
       submittedBy,
-      status: "Eingereicht",
+      status: "eingereicht",
       createdOn: new Date().toISOString(),
     };
   }
@@ -303,7 +334,7 @@ export async function createIdea(
     title: input.title,
     description: input.description,
     submittedBy, // Der Mock-User-Name (in Dataverse steht der Token-User)
-    status: "Eingereicht",
+    status: "eingereicht",
     createdOn: new Date().toISOString(),
   };
 }
@@ -367,7 +398,8 @@ function getMockIdeas(): Idea[] {
       description:
         "Aktuell erfassen wir Arbeitszeiten noch auf Papier oder in Excel. Eine mobile App würde den Prozess vereinfachen und Fehler reduzieren. Die App sollte offline funktionieren und sich mit unserem HR-System synchronisieren.",
       submittedBy: "Max Muster",
-      status: "In Prüfung",
+      type: "Idee",
+      status: "initialgeprüft",
       createdOn: "2024-11-15T09:30:00Z",
     },
     {
@@ -376,7 +408,8 @@ function getMockIdeas(): Idea[] {
       description:
         "Eingehende Rechnungen werden manuell in unser System eingegeben. Mit OCR und KI könnten wir diesen Prozess automatisieren. Das spart Zeit und reduziert Eingabefehler erheblich.",
       submittedBy: "Anna Beispiel",
-      status: "Genehmigt",
+      type: "Vorhaben",
+      status: "genehmigt",
       createdOn: "2024-11-10T14:15:00Z",
     },
     {
@@ -385,7 +418,8 @@ function getMockIdeas(): Idea[] {
       description:
         "Viele HR-Anfragen (Feriensaldo, Lohnabrechnung, Adressänderung) könnten über ein Portal selbst erledigt werden. Das entlastet die HR-Abteilung und gibt Mitarbeitenden mehr Autonomie.",
       submittedBy: "Peter Müller",
-      status: "Eingereicht",
+      type: "Projekt",
+      status: "in Umsetzung",
       createdOn: "2024-11-20T11:00:00Z",
     },
   ];

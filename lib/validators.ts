@@ -43,15 +43,19 @@ export const editIdeaSchema = z.object({
 
 /**
  * Mögliche Status-Werte für eine Idee.
- * Diese werden in Dataverse/Power Apps verwaltet.
+ * Diese entsprechen dem Lifecycle-Status in Dataverse (cr6df_lifecyclestatus).
  */
 export const ideaStatusValues = [
-  "Eingereicht",
-  "In Prüfung",
-  "Genehmigt",
-  "In Umsetzung",
-  "Abgeschlossen",
-  "Abgelehnt",
+  "eingereicht",
+  "initialgeprüft",
+  "in Überarbeitung",
+  "in Detailanalyse",
+  "zur Genehmigung",
+  "genehmigt",
+  "in Planung",
+  "in Umsetzung",
+  "umgesetzt",
+  "abgelehnt",
 ] as const;
 
 export const ideaStatusSchema = z.enum(ideaStatusValues);
