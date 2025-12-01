@@ -1,14 +1,37 @@
 /**
  * app/ideas/page.tsx
  * 
- * Die Ideen-Pool Seite. Zeigt alle eingereichten Ideen als Karten an.
+ * Die Ideen-Pool Seite. Zeigt alle eingereichten Ideen nach Typ gruppiert an.
  * Dies ist eine Server Component – die Daten werden serverseitig geladen.
  */
 
 import Link from "next/link";
 import { fetchAllIdeas, isDataverseConfigured, isTokenMissing } from "@/lib/dataverse";
 import { Idea } from "@/lib/validators";
-import { AlertCircle, Calendar, Lightbulb, User } from "lucide-react";
+import { AlertCircle, Calendar, FolderKanban, Lightbulb, Rocket, User } from "lucide-react";
+
+// Die drei Typen in der gewünschten Reihenfolge
+const IDEA_TYPES = ["Idee", "Vorhaben", "Projekt"] as const;
+type IdeaType = (typeof IDEA_TYPES)[number];
+
+// Icons und Farben für jeden Typ
+const TYPE_CONFIG: Record<IdeaType, { icon: React.ReactNode; color: string; description: string }> = {
+  Idee: {
+    icon: <Lightbulb className="h-5 w-5" />,
+    color: "text-warning",
+    description: "Neue Ideen und Vorschläge",
+  },
+  Vorhaben: {
+    icon: <FolderKanban className="h-5 w-5" />,
+    color: "text-info",
+    description: "Geplante Vorhaben",
+  },
+  Projekt: {
+    icon: <Rocket className="h-5 w-5" />,
+    color: "text-success",
+    description: "Aktive Projekte",
+  },
+};
 
 // Hilfsfunktion: Datum formatieren (z.B. "15. Nov 2024")
 function formatDate(dateString: string): string {
@@ -22,7 +45,6 @@ function formatDate(dateString: string): string {
 
 // Hilfsfunktion: Status-Badge mit passender Farbe
 function StatusBadge({ status }: { status: string }) {
-  // Farben je nach Status
   const colorMap: Record<string, string> = {
     Eingereicht: "badge-info",
     "In Prüfung": "badge-warning",
@@ -31,9 +53,7 @@ function StatusBadge({ status }: { status: string }) {
     Abgeschlossen: "badge-neutral",
     Abgelehnt: "badge-error",
   };
-
   const colorClass = colorMap[status] || "badge-ghost";
-
   return <span className={`badge ${colorClass}`}>{status}</span>;
 }
 
@@ -66,6 +86,40 @@ function IdeaCard({ idea }: { idea: Idea }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+// Komponente: Eine Kategorie-Sektion mit Ideen
+function TypeSection({ type, ideas }: { type: IdeaType; ideas: Idea[] }) {
+  const config = TYPE_CONFIG[type];
+  
+  return (
+    <div className="mb-8">
+      {/* Kategorie-Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`${config.color}`}>{config.icon}</div>
+        <div>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            {type}
+            <span className="badge badge-ghost badge-sm">{ideas.length}</span>
+          </h2>
+          <p className="text-sm text-base-content/60">{config.description}</p>
+        </div>
+      </div>
+
+      {/* Ideen-Grid oder leerer Zustand */}
+      {ideas.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {ideas.map((idea) => (
+            <IdeaCard key={idea.id} idea={idea} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-6 bg-base-200/50 rounded-lg">
+          <p className="text-base-content/50">Keine {type === "Idee" ? "Ideen" : type} vorhanden</p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -103,13 +157,36 @@ export default async function IdeasPage() {
   const ideas = await fetchAllIdeas();
   const isConfigured = isDataverseConfigured();
 
+  // Ideen nach Typ gruppieren
+  const groupedIdeas: Record<IdeaType, Idea[]> = {
+    Idee: [],
+    Vorhaben: [],
+    Projekt: [],
+  };
+
+  // Ideen den Kategorien zuordnen
+  for (const idea of ideas) {
+    const type = idea.type as IdeaType | undefined;
+    if (type && type in groupedIdeas) {
+      groupedIdeas[type].push(idea);
+    } else {
+      // Ohne Typ → als "Idee" kategorisieren
+      groupedIdeas.Idee.push(idea);
+    }
+  }
+
+  const totalCount = ideas.length;
+
   return (
     <div>
       {/* Seitenüberschrift */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Lightbulb className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold">Ideen-Pool</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Ideen-Pool</h1>
+            <p className="text-sm text-base-content/60">{totalCount} Einträge insgesamt</p>
+          </div>
         </div>
         <Link href="/ideas/new" className="btn btn-primary btn-sm">
           Neue Idee
@@ -119,11 +196,11 @@ export default async function IdeasPage() {
       {/* Hinweis wenn Demo-Modus */}
       {!isConfigured && <DataverseHint />}
 
-      {/* Ideen als Karten-Grid */}
-      {ideas.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {ideas.map((idea) => (
-            <IdeaCard key={idea.id} idea={idea} />
+      {/* Ideen nach Typ gruppiert */}
+      {totalCount > 0 ? (
+        <div>
+          {IDEA_TYPES.map((type) => (
+            <TypeSection key={type} type={type} ideas={groupedIdeas[type]} />
           ))}
         </div>
       ) : (

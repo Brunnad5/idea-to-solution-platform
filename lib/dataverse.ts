@@ -47,11 +47,32 @@ const FIELD_MAP = {
   description: "cr6df_beschreibung",
   submittedBy: "_createdby_value", // Lookup-Feld, gibt GUID zurück
   submittedByName: "_createdby_value@OData.Community.Display.V1.FormattedValue", // Anzeigename
-  type: "cr6df_typ",
+  type: "cr6df_typ", // OptionSet (Choice) mit numerischen Werten
   status: "cr6df_lifecyclestatus",
   createdOn: "createdon",
   modifiedOn: "modifiedon",
 } as const;
+
+/**
+ * Mapping für das Typ-Feld (OptionSet/Choice in Dataverse).
+ * Die Werte sind numerisch in Dataverse gespeichert.
+ */
+const TYPE_MAP: Record<number, string> = {
+  562520000: "Idee",
+  562520001: "Vorhaben",
+  562520002: "Projekt",
+};
+
+/** Wandelt den numerischen Typ-Wert in einen lesbaren String um */
+function mapTypeValue(value: unknown): string | undefined {
+  if (typeof value === "number") {
+    return TYPE_MAP[value] || undefined;
+  }
+  if (typeof value === "string") {
+    return value; // Falls bereits als String (z.B. FormattedValue)
+  }
+  return undefined;
+}
 
 // ============================================
 // HILFSFUNKTIONEN
@@ -88,12 +109,15 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
     (record[FIELD_MAP.submittedBy] as string) || 
     "Unbekannt";
 
+  // Typ: Numerischen Wert in lesbaren String umwandeln
+  const type = mapTypeValue(record[FIELD_MAP.type]);
+
   return {
     id: record[FIELD_MAP.id] as string,
     title: record[FIELD_MAP.title] as string,
     description: record[FIELD_MAP.description] as string,
     submittedBy,
-    type: record[FIELD_MAP.type] as string | undefined,
+    type,
     status,
     createdOn: record[FIELD_MAP.createdOn] as string,
     modifiedOn: record[FIELD_MAP.modifiedOn] as string | undefined,
