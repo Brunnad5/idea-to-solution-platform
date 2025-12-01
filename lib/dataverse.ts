@@ -313,7 +313,17 @@ export async function updateIdeaDescription(
   });
 
   if (!response.ok) {
-    throw new Error(`Dataverse Fehler: ${response.status} ${response.statusText}`);
+    // Detaillierte Fehlerinfos
+    let errorDetails = "";
+    try {
+      const errorBody = await response.json();
+      errorDetails = errorBody?.error?.message || JSON.stringify(errorBody);
+    } catch {
+      errorDetails = await response.text().catch(() => "Keine Details verfügbar");
+    }
+    
+    console.error("Dataverse Update Error:", { status: response.status, details: errorDetails });
+    throw new Error(`Dataverse ${response.status}: ${errorDetails}`);
   }
 }
 

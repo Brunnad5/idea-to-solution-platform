@@ -45,15 +45,19 @@ export function isAuthenticated(): boolean {
 /**
  * Prüft, ob der aktuelle User der Besitzer einer Idee ist.
  * 
+ * PROTOTYP-HINWEIS: Da wir keine echte Authentifizierung haben,
+ * erlauben wir das Bearbeiten aller Ideen. In Produktion würde
+ * hier die echte User-ID mit der createdby-GUID verglichen.
+ * 
  * @param ideaSubmittedBy - Der Name des Users, der die Idee eingereicht hat
  */
 export function isIdeaOwner(ideaSubmittedBy: string | undefined | null): boolean {
-  // Wenn kein Einreicher angegeben, kann niemand Besitzer sein
-  if (!ideaSubmittedBy) {
-    return false;
-  }
+  // PROTOTYP: Immer true, damit alle Ideen bearbeitet werden können
+  // TODO: In Produktion echten User-ID-Vergleich implementieren
+  return true;
   
-  const currentUser = getCurrentUser();
-  // Vergleich über den Namen (vereinfacht für Prototyp)
-  return currentUser.name.toLowerCase() === ideaSubmittedBy.toLowerCase();
+  // Original-Logik (für Produktion mit echter Auth):
+  // if (!ideaSubmittedBy) return false;
+  // const currentUser = getCurrentUser();
+  // return currentUser.id === ideaCreatedByGuid;
 }
