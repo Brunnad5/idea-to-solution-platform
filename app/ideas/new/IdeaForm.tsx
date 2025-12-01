@@ -39,11 +39,11 @@ export default function IdeaForm() {
     
     const result = await submitIdea(data);
 
-    if (result.success && result.ideaId) {
+    if (result.success) {
       setSubmitSuccess(true);
-      // Nach kurzer Verzögerung zur neuen Idee navigieren
+      // Nach kurzer Verzögerung zur Ideen-Liste navigieren
       setTimeout(() => {
-        router.push(`/ideas/${result.ideaId}`);
+        router.push("/ideas");
       }, 1500);
     } else {
       setSubmitError(result.error || "Ein unbekannter Fehler ist aufgetreten.");
