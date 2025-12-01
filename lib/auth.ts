@@ -47,7 +47,12 @@ export function isAuthenticated(): boolean {
  * 
  * @param ideaSubmittedBy - Der Name des Users, der die Idee eingereicht hat
  */
-export function isIdeaOwner(ideaSubmittedBy: string): boolean {
+export function isIdeaOwner(ideaSubmittedBy: string | undefined | null): boolean {
+  // Wenn kein Einreicher angegeben, kann niemand Besitzer sein
+  if (!ideaSubmittedBy) {
+    return false;
+  }
+  
   const currentUser = getCurrentUser();
   // Vergleich über den Namen (vereinfacht für Prototyp)
   return currentUser.name.toLowerCase() === ideaSubmittedBy.toLowerCase();

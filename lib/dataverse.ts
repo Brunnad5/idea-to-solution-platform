@@ -31,10 +31,10 @@ const DATAVERSE_URL = process.env.DATAVERSE_URL || "";
 const ACCESS_TOKEN = process.env.DATAVERSE_ACCESS_TOKEN || "";
 
 /**
- * Name der Tabelle in Dataverse (plural, lowercase).
- * Dataverse API verwendet den Plural-Namen der Entität.
+ * EntitySetName der Tabelle in Dataverse.
+ * Gefunden über Power Apps: cr6df_sgsw_digitalisierungsvorhaben
  */
-const TABLE_NAME = "sgsw_digitalisierungsvorhabens";
+const TABLE_NAME = "cr6df_sgsw_digitalisierungsvorhabens";
 
 /**
  * Mapping zwischen unseren Feldnamen und den Dataverse-Feldnamen.
@@ -42,7 +42,7 @@ const TABLE_NAME = "sgsw_digitalisierungsvorhabens";
  */
 const FIELD_MAP = {
   // Unsere Namen -> Dataverse Namen
-  id: "sgsw_digitalisierungsvorhabenid", // Primary Key (GUID)
+  id: "cr6df_sgsw_digitalisierungsvorhabenid", // Primary Key (GUID)
   title: "cr6df_name",
   description: "cr6df_beschreibung",
   submittedBy: "cr6df_ideengeber",
@@ -81,11 +81,14 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
   const rawStatus = record[FIELD_MAP.status] as string | undefined;
   const status: IdeaStatus = isValidStatus(rawStatus) ? rawStatus : "Eingereicht";
 
+  // submittedBy kann leer sein, dann "Unbekannt" anzeigen
+  const submittedBy = (record[FIELD_MAP.submittedBy] as string) || "Unbekannt";
+
   return {
     id: record[FIELD_MAP.id] as string,
     title: record[FIELD_MAP.title] as string,
     description: record[FIELD_MAP.description] as string,
-    submittedBy: record[FIELD_MAP.submittedBy] as string,
+    submittedBy,
     type: record[FIELD_MAP.type] as string | undefined,
     status,
     createdOn: record[FIELD_MAP.createdOn] as string,
@@ -140,17 +143,33 @@ export async function fetchAllIdeas(): Promise<Idea[]> {
 
   const url = `${DATAVERSE_URL}/api/data/v9.2/${TABLE_NAME}?$orderby=createdon desc`;
 
-  const response = await fetch(url, {
-    headers: createHeaders(),
-    cache: "no-store", // Immer frische Daten holen
-  });
+  try {
+    const response = await fetch(url, {
+      headers: createHeaders(),
+      cache: "no-store", // Immer frische Daten holen
+    });
 
-  if (!response.ok) {
-    throw new Error(`Dataverse Fehler: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      // Bei Fehlern: Log und Fallback auf Mock-Daten
+      console.error(`Dataverse Fehler: ${response.status} ${response.statusText}`);
+      console.error(`URL: ${url}`);
+      
+      if (response.status === 404) {
+        console.error(`Tabelle "${TABLE_NAME}" nicht gefunden. Prüfe den EntitySetName in Dataverse.`);
+      } else if (response.status === 401) {
+        console.error("Token abgelaufen oder ungültig. Bitte neuen Token holen.");
+      }
+      
+      return getMockIdeas();
+    }
+
+    const data = await response.json();
+    return (data.value || []).map(mapDataverseToIdea);
+  } catch (error) {
+    // Netzwerkfehler oder andere Probleme
+    console.error("Fehler beim Laden der Ideen:", error);
+    return getMockIdeas();
   }
-
-  const data = await response.json();
-  return (data.value || []).map(mapDataverseToIdea);
 }
 
 /**
@@ -168,21 +187,27 @@ export async function fetchIdeaById(id: string): Promise<Idea | null> {
 
   const url = `${DATAVERSE_URL}/api/data/v9.2/${TABLE_NAME}(${id})`;
 
-  const response = await fetch(url, {
-    headers: createHeaders(),
-    cache: "no-store",
-  });
+  try {
+    const response = await fetch(url, {
+      headers: createHeaders(),
+      cache: "no-store",
+    });
 
-  if (response.status === 404) {
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      console.error(`Dataverse Fehler: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const record = await response.json();
+    return mapDataverseToIdea(record);
+  } catch (error) {
+    console.error("Fehler beim Laden der Idee:", error);
     return null;
   }
-
-  if (!response.ok) {
-    throw new Error(`Dataverse Fehler: ${response.status} ${response.statusText}`);
-  }
-
-  const record = await response.json();
-  return mapDataverseToIdea(record);
 }
 
 /**
