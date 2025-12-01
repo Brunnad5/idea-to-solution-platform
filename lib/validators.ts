@@ -74,6 +74,7 @@ export const ideaSchema = z.object({
 
   // System-generierte Felder
   submittedBy: z.string(), // Name des Einreichers (aus MS Account)
+  submittedById: z.string().optional(), // Azure AD Object ID des Einreichers (für Besitzer-Prüfung)
   submittedByEmail: z.string().email().optional(), // E-Mail für Vergleiche
   type: z.string().optional(), // Typ (vom System gesetzt)
   status: ideaStatusSchema, // Aktueller Lifecycle-Status

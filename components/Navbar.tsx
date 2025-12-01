@@ -9,7 +9,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Lightbulb, Menu, Plus, User } from "lucide-react";
+import { Lightbulb, Menu, Plus } from "lucide-react";
+import UserMenu from "./UserMenu";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -85,10 +86,7 @@ export default function Navbar() {
       {/* Rechter Bereich: User-Info */}
       <div className="navbar-end">
         <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-2 text-sm text-base-content/70">
-            <User className="h-4 w-4" />
-            <span>Demo User</span>
-          </div>
+          <UserMenu />
           <div className="badge badge-ghost badge-sm hidden md:flex">
             Prototyp
           </div>

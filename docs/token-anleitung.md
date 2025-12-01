@@ -5,7 +5,32 @@ Der Token läuft nach ca. **1 Stunde** ab und muss dann erneuert werden.
 
 ---
 
-## Option 1: Via Postman (empfohlen)
+## Token in der App eingeben (NEU!)
+
+Seit dem letzten Update kannst du den Token direkt in der App eingeben:
+
+1. Öffne die App unter `http://localhost:3000`
+2. Klicke auf **Verbinden** (rechts oben in der Navbar)
+3. Füge den Token ein
+4. Fertig! Dein Name wird angezeigt und Dataverse-Daten werden geladen
+
+Der Token wird als Cookie gespeichert und funktioniert auch auf Vercel.
+
+---
+
+## Token holen: Option 1 - Via Browser DevTools (schnellste Methode)
+
+1. Öffne [Power Apps](https://make.powerapps.com) und melde dich an
+2. Öffne die Browser-Entwicklertools (**F12**)
+3. Gehe zu **Network** (Netzwerk)
+4. Klicke auf irgendeine App oder führe eine Aktion aus
+5. Suche nach einem Request zu `dynamics.com` oder `crm17.dynamics.com`
+6. Klicke auf den Request → **Headers** → **Request Headers**
+7. Kopiere den Wert nach `Authorization: Bearer ` (ohne "Bearer ")
+
+---
+
+## Token holen: Option 2 - Via Postman
 
 ### Schritt 1: OAuth-Request konfigurieren
 
@@ -32,22 +57,9 @@ Der Token läuft nach ca. **1 Stunde** ab und muss dann erneuert werden.
 3. Nach erfolgreicher Anmeldung siehst du den Token
 4. Kopiere den **Access Token**
 
-### Schritt 3: In .env.local einfügen
+### Schritt 3: Token eingeben
 
-```bash
-DATAVERSE_ACCESS_TOKEN=eyJ0eXAiOiJKV1Q...  # Dein kopierter Token
-```
-
----
-
-## Option 2: Via Browser DevTools
-
-1. Öffne Power Apps (https://make.powerapps.com) und melde dich an
-2. Öffne die Browser-Entwicklertools (F12)
-3. Gehe zu **Network** (Netzwerk)
-4. Führe eine Aktion aus (z.B. öffne eine App)
-5. Suche nach einem Request zu `dynamics.com`
-6. Kopiere den `Authorization: Bearer ...` Header
+Kopiere den **Access Token** und füge ihn in der App ein (siehe oben).
 
 ---
 

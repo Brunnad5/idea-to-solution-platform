@@ -8,14 +8,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchIdeaById } from "@/lib/dataverse";
-import { getCurrentUser, isIdeaOwner } from "@/lib/auth";
 import { IdeaStatus } from "@/lib/validators";
+import EditButton from "@/components/EditButton";
 import { 
   ArrowLeft, 
   Calendar, 
   Check,
   Clock, 
-  Edit, 
   Lightbulb, 
   Tag, 
   User,
@@ -159,10 +158,6 @@ export default async function IdeaDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Prüfen ob aktueller User der Besitzer ist (für Edit-Button)
-  const currentUser = getCurrentUser();
-  const canEdit = isIdeaOwner(idea.submittedBy);
-
   return (
     <div className="max-w-3xl mx-auto">
       {/* Zurück-Link */}
@@ -253,31 +248,13 @@ export default async function IdeaDetailPage({ params }: PageProps) {
             )}
           </div>
 
-          {/* Aktionen (nur für Besitzer) */}
-          {canEdit && (
-            <>
-              <div className="divider"></div>
-              <div className="flex justify-end">
-                <Link 
-                  href={`/ideas/${id}/edit`}
-                  className="btn btn-primary gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  Beschreibung bearbeiten
-                </Link>
-              </div>
-            </>
-          )}
+          {/* Aktionen */}
+          <div className="divider"></div>
+          <div className="flex justify-end">
+            <EditButton ideaId={id} createdByGuid={idea.submittedById} />
+          </div>
         </div>
       </div>
-
-      {/* Debug-Info für Entwicklung (nur wenn User nicht Besitzer ist) */}
-      {!canEdit && (
-        <div className="mt-4 text-sm text-base-content/50 text-center">
-          Eingeloggt als: {currentUser.name} · 
-          Nur der Einreicher kann diese Idee bearbeiten.
-        </div>
-      )}
     </div>
   );
 }

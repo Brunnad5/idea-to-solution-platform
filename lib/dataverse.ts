@@ -6,12 +6,13 @@
  * 
  * Die Tabelle heisst: sgsw_digitalisierungsvorhabens
  * 
- * MANUELLER TOKEN-ANSATZ:
- * Da keine Azure App Registration verfügbar ist, wird der Access Token
- * manuell geholt und in der Umgebungsvariable DATAVERSE_ACCESS_TOKEN gespeichert.
- * Der Token läuft nach ca. 1 Stunde ab und muss dann erneuert werden.
+ * TOKEN-ANSATZ:
+ * Der Access Token wird vom User im Browser eingegeben und als Cookie gespeichert.
+ * Server-seitig lesen wir den Token aus dem Cookie.
+ * Fallback: Umgebungsvariable DATAVERSE_ACCESS_TOKEN für lokale Entwicklung.
  */
 
+import { cookies } from "next/headers";
 import { Idea, CreateIdeaInput, IdeaStatus } from "./validators";
 
 // ============================================
@@ -25,10 +26,14 @@ import { Idea, CreateIdeaInput, IdeaStatus } from "./validators";
 const DATAVERSE_URL = process.env.DATAVERSE_URL || "";
 
 /**
- * Manuell geholter Access Token für Dataverse.
- * Wird aus der Umgebungsvariable gelesen.
+ * Fallback Access Token aus Umgebungsvariable (für lokale Entwicklung).
  */
-const ACCESS_TOKEN = process.env.DATAVERSE_ACCESS_TOKEN || "";
+const FALLBACK_TOKEN = process.env.DATAVERSE_ACCESS_TOKEN || "";
+
+/**
+ * Cookie-Name für den Token (muss mit AuthProvider übereinstimmen)
+ */
+const TOKEN_COOKIE_NAME = "dataverse_token";
 
 /**
  * EntitySetName der Tabelle in Dataverse.
@@ -79,12 +84,34 @@ function mapTypeValue(value: unknown): string | undefined {
 // ============================================
 
 /**
- * Erstellt die Standard-Header für Dataverse API-Calls.
- * Verwendet den Token aus der Umgebungsvariable.
+ * Holt den Access Token aus dem Cookie oder der Umgebungsvariable.
+ * 
+ * Reihenfolge:
+ * 1. Cookie (vom User im Browser gesetzt)
+ * 2. Umgebungsvariable (Fallback für Entwicklung)
  */
-function createHeaders(): HeadersInit {
+async function getAccessToken(): Promise<string> {
+  try {
+    const cookieStore = await cookies();
+    const tokenCookie = cookieStore.get(TOKEN_COOKIE_NAME);
+    if (tokenCookie?.value) {
+      return tokenCookie.value;
+    }
+  } catch {
+    // cookies() kann in bestimmten Kontexten fehlschlagen
+    // (z.B. in Static Generation), dann Fallback verwenden
+  }
+  return FALLBACK_TOKEN;
+}
+
+/**
+ * Erstellt die Standard-Header für Dataverse API-Calls.
+ * Verwendet den Token aus Cookie oder Umgebungsvariable.
+ */
+async function createHeaders(): Promise<HeadersInit> {
+  const token = await getAccessToken();
   return {
-    Authorization: `Bearer ${ACCESS_TOKEN}`,
+    Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
     "OData-MaxVersion": "4.0",
     "OData-Version": "4.0",
@@ -108,6 +135,10 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
     (record[FIELD_MAP.submittedBy] as string) || 
     "Unbekannt";
 
+  // submittedById: Die Azure AD Object ID des Erstellers (GUID)
+  // Wird für die Besitzer-Prüfung verwendet
+  const submittedById = record[FIELD_MAP.submittedBy] as string | undefined;
+
   // Typ: Numerischen Wert in lesbaren String umwandeln
   const type = mapTypeValue(record[FIELD_MAP.type]);
 
@@ -116,6 +147,7 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
     title: record[FIELD_MAP.title] as string,
     description: record[FIELD_MAP.description] as string,
     submittedBy,
+    submittedById,
     type,
     status,
     createdOn: record[FIELD_MAP.createdOn] as string,
@@ -169,18 +201,20 @@ function isValidStatus(value: unknown): value is IdeaStatus {
 }
 
 /**
- * Prüft, ob die Dataverse-Konfiguration vollständig ist (URL + Token).
+ * Prüft, ob die Dataverse-URL konfiguriert ist.
+ * Der Token wird separat via Cookie oder env geprüft.
  */
-export function isDataverseConfigured(): boolean {
-  return Boolean(DATAVERSE_URL) && Boolean(ACCESS_TOKEN);
+export function isDataverseUrlConfigured(): boolean {
+  return Boolean(DATAVERSE_URL);
 }
 
 /**
- * Prüft, ob nur die URL konfiguriert ist (aber kein Token).
- * Nützlich für Fehlermeldungen.
+ * Prüft async, ob die Dataverse-Konfiguration vollständig ist (URL + Token).
  */
-export function isTokenMissing(): boolean {
-  return Boolean(DATAVERSE_URL) && !ACCESS_TOKEN;
+export async function isDataverseConfigured(): Promise<boolean> {
+  if (!DATAVERSE_URL) return false;
+  const token = await getAccessToken();
+  return Boolean(token);
 }
 
 // ============================================
@@ -195,7 +229,7 @@ export function isTokenMissing(): boolean {
  */
 export async function fetchAllIdeas(): Promise<Idea[]> {
   // Fallback auf Mock-Daten, wenn nicht konfiguriert
-  if (!isDataverseConfigured()) {
+  if (!(await isDataverseConfigured())) {
     console.warn("Dataverse nicht konfiguriert - verwende Mock-Daten");
     return getMockIdeas();
   }
@@ -204,7 +238,7 @@ export async function fetchAllIdeas(): Promise<Idea[]> {
 
   try {
     const response = await fetch(url, {
-      headers: createHeaders(),
+      headers: await createHeaders(),
       cache: "no-store", // Immer frische Daten holen
     });
 
@@ -238,7 +272,7 @@ export async function fetchAllIdeas(): Promise<Idea[]> {
  */
 export async function fetchIdeaById(id: string): Promise<Idea | null> {
   // Fallback auf Mock-Daten, wenn nicht konfiguriert
-  if (!isDataverseConfigured()) {
+  if (!(await isDataverseConfigured())) {
     console.warn("Dataverse nicht konfiguriert - verwende Mock-Daten");
     const mockIdeas = getMockIdeas();
     return mockIdeas.find((idea) => idea.id === id) || null;
@@ -248,7 +282,7 @@ export async function fetchIdeaById(id: string): Promise<Idea | null> {
 
   try {
     const response = await fetch(url, {
-      headers: createHeaders(),
+      headers: await createHeaders(),
       cache: "no-store",
     });
 
@@ -280,7 +314,7 @@ export async function createIdea(
   submittedBy: string
 ): Promise<Idea> {
   // Fallback: Mock-Erstellung, wenn nicht konfiguriert
-  if (!isDataverseConfigured()) {
+  if (!(await isDataverseConfigured())) {
     console.warn("Dataverse nicht konfiguriert - simuliere Erstellung");
     return {
       id: crypto.randomUUID(),
@@ -304,7 +338,7 @@ export async function createIdea(
 
   const response = await fetch(url, {
     method: "POST",
-    headers: createHeaders(),
+    headers: await createHeaders(),
     body: JSON.stringify(body),
   });
 
@@ -350,7 +384,7 @@ export async function updateIdeaDescription(
   description: string
 ): Promise<void> {
   // Mock-Update, wenn nicht konfiguriert
-  if (!isDataverseConfigured()) {
+  if (!(await isDataverseConfigured())) {
     console.warn("Dataverse nicht konfiguriert - simuliere Update");
     return;
   }
@@ -363,7 +397,7 @@ export async function updateIdeaDescription(
 
   const response = await fetch(url, {
     method: "PATCH",
-    headers: createHeaders(),
+    headers: await createHeaders(),
     body: JSON.stringify(body),
   });
 
@@ -398,6 +432,7 @@ function getMockIdeas(): Idea[] {
       description:
         "Aktuell erfassen wir Arbeitszeiten noch auf Papier oder in Excel. Eine mobile App würde den Prozess vereinfachen und Fehler reduzieren. Die App sollte offline funktionieren und sich mit unserem HR-System synchronisieren.",
       submittedBy: "Max Muster",
+      submittedById: "11111111-1111-1111-1111-111111111111", // Mock GUID
       type: "Idee",
       status: "initialgeprüft",
       createdOn: "2024-11-15T09:30:00Z",
@@ -408,6 +443,7 @@ function getMockIdeas(): Idea[] {
       description:
         "Eingehende Rechnungen werden manuell in unser System eingegeben. Mit OCR und KI könnten wir diesen Prozess automatisieren. Das spart Zeit und reduziert Eingabefehler erheblich.",
       submittedBy: "Anna Beispiel",
+      submittedById: "22222222-2222-2222-2222-222222222222", // Mock GUID
       type: "Vorhaben",
       status: "genehmigt",
       createdOn: "2024-11-10T14:15:00Z",
@@ -418,6 +454,7 @@ function getMockIdeas(): Idea[] {
       description:
         "Viele HR-Anfragen (Feriensaldo, Lohnabrechnung, Adressänderung) könnten über ein Portal selbst erledigt werden. Das entlastet die HR-Abteilung und gibt Mitarbeitenden mehr Autonomie.",
       submittedBy: "Peter Müller",
+      submittedById: "33333333-3333-3333-3333-333333333333", // Mock GUID
       type: "Projekt",
       status: "in Umsetzung",
       createdOn: "2024-11-20T11:00:00Z",

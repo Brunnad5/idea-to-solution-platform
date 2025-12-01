@@ -6,7 +6,7 @@
  */
 
 import Link from "next/link";
-import { fetchAllIdeas, isDataverseConfigured, isTokenMissing } from "@/lib/dataverse";
+import { fetchAllIdeas, isDataverseConfigured } from "@/lib/dataverse";
 import { Idea } from "@/lib/validators";
 import { AlertCircle, Calendar, FolderKanban, Lightbulb, Rocket, User } from "lucide-react";
 
@@ -129,19 +129,15 @@ function TypeSection({ type, ideas }: { type: IdeaType; ideas: Idea[] }) {
 
 // Komponente: Hinweis wenn Dataverse nicht konfiguriert oder Fehler auftraten
 function DataverseHint({ hasError = false }: { hasError?: boolean }) {
-  const tokenMissing = isTokenMissing();
-
   // Unterschiedliche Meldungen je nach Situation
   let title = "Demo-Modus aktiv";
-  let message = "Dataverse ist nicht konfiguriert. Es werden Mock-Daten angezeigt.";
+  let message = "Dataverse ist nicht konfiguriert oder kein Token vorhanden. Es werden Mock-Daten angezeigt. Klicke auf 'Verbinden' um einen Token einzugeben.";
   let alertType = "alert-info";
 
   if (hasError) {
     title = "Dataverse-Verbindung fehlgeschlagen";
-    message = "Die Verbindung zu Dataverse ist fehlgeschlagen (404: Tabelle nicht gefunden oder Token-Problem). Es werden Mock-Daten angezeigt. Prüfe die Server-Konsole für Details.";
+    message = "Die Verbindung zu Dataverse ist fehlgeschlagen. Prüfe ob der Token noch gültig ist und gib ggf. einen neuen ein.";
     alertType = "alert-warning";
-  } else if (tokenMissing) {
-    message = "Dataverse-URL ist konfiguriert, aber der Access Token fehlt. Es werden Mock-Daten angezeigt.";
   }
 
   return (
@@ -159,7 +155,7 @@ function DataverseHint({ hasError = false }: { hasError?: boolean }) {
 export default async function IdeasPage() {
   // Ideen laden (aus Dataverse oder Mock-Daten)
   const ideas = await fetchAllIdeas();
-  const isConfigured = isDataverseConfigured();
+  const isConfigured = await isDataverseConfigured();
 
   // Ideen nach Typ gruppieren
   const groupedIdeas: Record<IdeaType, Idea[]> = {
