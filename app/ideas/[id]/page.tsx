@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchIdeaById } from "@/lib/dataverse";
+import { fetchIdeaById, fetchBpfStatus, BpfStatus } from "@/lib/dataverse";
 import { IdeaStatus } from "@/lib/validators";
 import EditButton from "@/components/EditButton";
 import { 
@@ -39,24 +39,6 @@ function formatDate(dateString: string): string {
   });
 }
 
-// Der "Happy Path" - normale Prozess-Reihenfolge
-const PROCESS_STEPS: { status: IdeaStatus; label: string }[] = [
-  { status: "eingereicht", label: "Eingereicht" },
-  { status: "initialgeprüft", label: "Initialprüfung" },
-  { status: "zur Genehmigung", label: "Zur Genehmigung" },
-  { status: "genehmigt", label: "Genehmigt" },
-  { status: "in Planung", label: "In Planung" },
-  { status: "in Umsetzung", label: "In Umsetzung" },
-  { status: "umgesetzt", label: "Umgesetzt" },
-];
-
-// Status die nicht im Happy Path sind (werden separat behandelt)
-const SPECIAL_STATUS: Record<IdeaStatus, string> = {
-  "in Überarbeitung": "Überarbeitung erforderlich",
-  "in Detailanalyse": "Detailanalyse läuft",
-  "abgelehnt": "Abgelehnt",
-} as Record<IdeaStatus, string>;
-
 // Hilfsfunktion: Status-Badge mit passender Farbe
 function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
@@ -75,12 +57,43 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`badge badge-lg ${colorClass}`}>{status}</span>;
 }
 
-// Timeline-Komponente
-function ProcessTimeline({ currentStatus }: { currentStatus: IdeaStatus }) {
-  // Finde Position im Happy Path
-  const currentIndex = PROCESS_STEPS.findIndex(s => s.status === currentStatus);
-  const isRejected = currentStatus === "abgelehnt";
-  const isSpecialStatus = currentStatus in SPECIAL_STATUS;
+// BPF Stages (Phasen)
+const BPF_STAGES = [
+  { name: "Initialisierung", category: 0 },
+  { name: "Analyse & Bewertung", category: 1 },
+  { name: "Planung", category: 2 },
+  { name: "Umsetzung", category: 3 },
+];
+
+// Timeline-Komponente mit BPF-Daten
+function ProcessTimeline({ bpfStatus }: { bpfStatus: BpfStatus | null }) {
+  // Wenn keine BPF-Daten, zeige Hinweis
+  if (!bpfStatus) {
+    return (
+      <div className="mt-6">
+        <h2 className="text-sm font-semibold text-base-content/60 uppercase tracking-wide mb-4">
+          Prozess-Fortschritt
+        </h2>
+        <div className="alert alert-info">
+          <Clock className="h-5 w-5" />
+          <span>Prozess-Informationen werden geladen...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const currentStageCategory = bpfStatus.activeStage.stageCategory;
+  const isCompleted = bpfStatus.stateCode === 1;
+
+  // Datum formatieren
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("de-CH", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
 
   return (
     <div className="mt-6">
@@ -88,58 +101,54 @@ function ProcessTimeline({ currentStatus }: { currentStatus: IdeaStatus }) {
         Prozess-Fortschritt
       </h2>
 
-      {/* Abgelehnt-Hinweis */}
-      {isRejected && (
-        <div className="alert alert-error mb-4">
-          <XCircle className="h-5 w-5" />
-          <span>Diese Idee wurde abgelehnt.</span>
+      {/* Abgeschlossen-Hinweis */}
+      {isCompleted && bpfStatus.completedOn && (
+        <div className="alert alert-success mb-4">
+          <Check className="h-5 w-5" />
+          <span>Prozess abgeschlossen am {formatDate(bpfStatus.completedOn)}</span>
         </div>
       )}
 
-      {/* Sonderstatus-Hinweis */}
-      {isSpecialStatus && !isRejected && (
-        <div className="alert alert-warning mb-4">
+      {/* Aktuelle Phase */}
+      {!isCompleted && (
+        <div className="alert alert-info mb-4">
           <Clock className="h-5 w-5" />
-          <span>Status: {SPECIAL_STATUS[currentStatus]}</span>
+          <div>
+            <p className="font-medium">Aktuelle Phase: {bpfStatus.activeStage.stageName}</p>
+            <p className="text-xs opacity-80">Seit {formatDate(bpfStatus.activeStageStartedOn)}</p>
+          </div>
         </div>
       )}
 
       {/* Timeline */}
       <ul className="steps steps-vertical lg:steps-horizontal w-full">
-        {PROCESS_STEPS.map((step, index) => {
-          const isCompleted = currentIndex > index;
-          const isCurrent = step.status === currentStatus;
+        {BPF_STAGES.map((stage) => {
+          const isStageCompleted = currentStageCategory > stage.category || isCompleted;
+          const isCurrent = currentStageCategory === stage.category && !isCompleted;
           
           let stepClass = "";
-          if (isCompleted) stepClass = "step-success";
+          if (isStageCompleted) stepClass = "step-success";
           else if (isCurrent) stepClass = "step-primary";
           
           return (
             <li 
-              key={step.status} 
+              key={stage.category} 
               className={`step ${stepClass}`}
-              data-content={isCompleted ? "✓" : (index + 1).toString()}
+              data-content={isStageCompleted ? "✓" : (stage.category + 1).toString()}
             >
               <span className={`text-xs ${isCurrent ? "font-bold" : ""}`}>
-                {step.label}
+                {stage.name}
               </span>
             </li>
           );
         })}
       </ul>
 
-      {/* Nächster Schritt (wenn nicht abgelehnt/umgesetzt) */}
-      {currentIndex >= 0 && currentIndex < PROCESS_STEPS.length - 1 && !isRejected && (
+      {/* Nächste Phase */}
+      {!isCompleted && currentStageCategory < BPF_STAGES.length - 1 && (
         <div className="mt-4 text-sm text-base-content/60 flex items-center gap-2">
           <Check className="h-4 w-4" />
-          Nächster Schritt: <span className="font-medium">{PROCESS_STEPS[currentIndex + 1].label}</span>
-        </div>
-      )}
-
-      {currentStatus === "umgesetzt" && (
-        <div className="mt-4 text-sm text-success flex items-center gap-2">
-          <Check className="h-4 w-4" />
-          Erfolgreich umgesetzt!
+          Nächste Phase: <span className="font-medium">{BPF_STAGES[currentStageCategory + 1].name}</span>
         </div>
       )}
     </div>
@@ -283,8 +292,11 @@ export default async function IdeaDetailPage({ params }: PageProps) {
   // ID aus URL-Parametern holen
   const { id } = await params;
 
-  // Idee aus Dataverse laden
-  const idea = await fetchIdeaById(id);
+  // Idee und BPF-Status parallel laden
+  const [idea, bpfStatus] = await Promise.all([
+    fetchIdeaById(id),
+    fetchBpfStatus(id),
+  ]);
 
   // 404 wenn Idee nicht gefunden
   if (!idea) {
@@ -325,7 +337,7 @@ export default async function IdeaDetailPage({ params }: PageProps) {
           </div>
 
           {/* Timeline */}
-          <ProcessTimeline currentStatus={idea.status} />
+          <ProcessTimeline bpfStatus={bpfStatus} />
 
           {/* Zusätzliche Abschnitte (einklappbar) */}
           <div className="mt-6 space-y-4">

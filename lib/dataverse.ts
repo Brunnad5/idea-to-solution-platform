@@ -42,6 +42,12 @@ const TOKEN_COOKIE_NAME = "dataverse_token";
 const TABLE_NAME = "cr6df_sgsw_digitalisierungsvorhabens";
 
 /**
+ * EntitySetName der Business Process Flow Tabelle.
+ * Wird für die Prozess-Visualisierung verwendet.
+ */
+const BPF_TABLE_NAME = "cr6df_ideatosolutions";
+
+/**
  * Mapping zwischen unseren Feldnamen und den Dataverse-Feldnamen.
  * Dataverse verwendet Präfixe wie "cr6df_" für benutzerdefinierte Felder.
  */
