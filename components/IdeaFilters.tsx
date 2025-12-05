@@ -11,19 +11,13 @@ import { useState, useEffect, useMemo } from "react";
 import { Search, Filter, X, User, ChevronDown } from "lucide-react";
 import { Idea, IdeaStatus } from "@/lib/validators";
 
-// Alle möglichen Status-Werte
-const ALL_STATUSES: IdeaStatus[] = [
-  "eingereicht",
-  "initialgeprüft",
-  "in Überarbeitung",
-  "in Detailanalyse",
-  "zur Genehmigung",
-  "genehmigt",
-  "in Planung",
-  "in Umsetzung",
-  "umgesetzt",
-  "abgelehnt",
-];
+// BPF Status-Werte (4 Phasen)
+const BPF_STATUSES = [
+  "Initialisierung",
+  "Analyse & Bewertung",
+  "Planung",
+  "Umsetzung",
+] as const;
 
 // Typ-Optionen
 const TYPE_OPTIONS = ["Idee", "Vorhaben", "Projekt"] as const;
@@ -38,7 +32,7 @@ export default function IdeaFilters({ ideas, onFilteredIdeasChange }: IdeaFilter
   // Filter-State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedStatuses, setSelectedStatuses] = useState<IdeaStatus[]>([]);
+  const [selectedBpfStatuses, setSelectedBpfStatuses] = useState<string[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<string>("");
 
   // Alle eindeutigen Personen aus den Ideen extrahieren
@@ -54,40 +48,36 @@ export default function IdeaFilters({ ideas, onFilteredIdeasChange }: IdeaFilter
 
   // Filterlogik
   const filteredIdeas = useMemo(() => {
-    return ideas.filter((idea) => {
-      // Volltextsuche (Titel und Beschreibung)
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesTitle = idea.title?.toLowerCase().includes(query) ?? false;
-        const matchesDescription = idea.description?.toLowerCase().includes(query) ?? false;
-        const matchesPerson = idea.submittedBy?.toLowerCase().includes(query) ?? false;
-        if (!matchesTitle && !matchesDescription && !matchesPerson) {
-          return false;
-        }
-      }
+    let filtered = [...ideas];
 
-      // Typ-Filter
-      if (selectedTypes.length > 0) {
-        if (!idea.type || !selectedTypes.includes(idea.type)) {
-          return false;
-        }
-      }
+    // Textsuche
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (idea) =>
+          idea.title.toLowerCase().includes(query) ||
+          idea.description.toLowerCase().includes(query) ||
+          idea.submittedBy.toLowerCase().includes(query)
+      );
+    }
 
-      // Status-Filter
-      if (selectedStatuses.length > 0) {
-        if (!selectedStatuses.includes(idea.status)) {
-          return false;
-        }
-      }
+    // Typ-Filter
+    if (selectedTypes.length > 0) {
+      filtered = filtered.filter((idea) => idea.type && selectedTypes.includes(idea.type));
+    }
 
-      // Person-Filter
-      if (selectedPerson && (!idea.submittedBy || idea.submittedBy !== selectedPerson)) {
-        return false;
-      }
+    // BPF-Status-Filter
+    if (selectedBpfStatuses.length > 0) {
+      filtered = filtered.filter((idea) => idea.bpfStatus && selectedBpfStatuses.includes(idea.bpfStatus));
+    }
 
-      return true;
-    });
-  }, [ideas, searchQuery, selectedTypes, selectedStatuses, selectedPerson]);
+    // Personen-Filter
+    if (selectedPerson) {
+      filtered = filtered.filter((idea) => idea.submittedBy === selectedPerson);
+    }
+
+    return filtered;
+  }, [searchQuery, selectedTypes, selectedBpfStatuses, selectedPerson, ideas]);
 
   // Gefilterte Ideen an Parent übergeben
   useEffect(() => {
@@ -101,18 +91,18 @@ export default function IdeaFilters({ ideas, onFilteredIdeasChange }: IdeaFilter
     );
   };
 
-  // Status-Toggle
-  const toggleStatus = (status: IdeaStatus) => {
-    setSelectedStatuses((prev) =>
+  // BPF-Status-Toggle
+  const toggleBpfStatus = (status: string) => {
+    setSelectedBpfStatuses((prev) =>
       prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
     );
   };
 
   // Alle Filter zurücksetzen
-  const clearAllFilters = () => {
+  const resetFilters = () => {
     setSearchQuery("");
     setSelectedTypes([]);
-    setSelectedStatuses([]);
+    setSelectedBpfStatuses([]);
     setSelectedPerson("");
   };
 
@@ -120,7 +110,7 @@ export default function IdeaFilters({ ideas, onFilteredIdeasChange }: IdeaFilter
   const activeFilterCount =
     (searchQuery ? 1 : 0) +
     selectedTypes.length +
-    selectedStatuses.length +
+    selectedBpfStatuses.length +
     (selectedPerson ? 1 : 0);
 
   return (
@@ -176,24 +166,24 @@ export default function IdeaFilters({ ideas, onFilteredIdeasChange }: IdeaFilter
           </ul>
         </div>
 
-        {/* Status-Filter */}
+        {/* BPF-Status-Filter */}
         <div className="dropdown">
           <div tabIndex={0} role="button" className="btn btn-sm btn-outline gap-1">
             <Filter className="h-3 w-3" />
-            Status
-            {selectedStatuses.length > 0 && (
-              <span className="badge badge-primary badge-xs">{selectedStatuses.length}</span>
+            Phase
+            {selectedBpfStatuses.length > 0 && (
+              <span className="badge badge-primary badge-xs">{selectedBpfStatuses.length}</span>
             )}
             <ChevronDown className="h-3 w-3" />
           </div>
-          <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow mt-1 max-h-64 overflow-y-auto">
-            {ALL_STATUSES.map((status) => (
+          <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-10 w-60 p-2 shadow mt-1">
+            {BPF_STATUSES.map((status) => (
               <li key={status}>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={selectedStatuses.includes(status)}
-                    onChange={() => toggleStatus(status)}
+                    checked={selectedBpfStatuses.includes(status)}
+                    onChange={() => toggleBpfStatus(status)}
                     className="checkbox checkbox-sm checkbox-primary"
                   />
                   {status}
@@ -238,7 +228,7 @@ export default function IdeaFilters({ ideas, onFilteredIdeasChange }: IdeaFilter
 
         {/* Filter zurücksetzen */}
         {activeFilterCount > 0 && (
-          <button onClick={clearAllFilters} className="btn btn-sm btn-ghost text-error gap-1">
+          <button onClick={resetFilters} className="btn btn-sm btn-ghost text-error gap-1">
             <X className="h-3 w-3" />
             <span className="hidden sm:inline">Filter zurücksetzen</span>
             <span className="sm:hidden">Zurücksetzen</span>

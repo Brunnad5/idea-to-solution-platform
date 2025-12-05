@@ -46,22 +46,20 @@ function formatDate(dateString: string): string {
   });
 }
 
-// Status-Badge
-function StatusBadge({ status }: { status: string }) {
+// BPF Status-Badge
+function BpfStatusBadge({ bpfStatus }: { bpfStatus?: string }) {
+  if (!bpfStatus) {
+    return <span className="badge badge-ghost">Keine Phase</span>;
+  }
+
   const colorMap: Record<string, string> = {
-    "eingereicht": "badge-info",
-    "initialgeprüft": "badge-info",
-    "in Überarbeitung": "badge-warning",
-    "in Detailanalyse": "badge-warning",
-    "zur Genehmigung": "badge-warning",
-    "genehmigt": "badge-success",
-    "in Planung": "badge-primary",
-    "in Umsetzung": "badge-primary",
-    "umgesetzt": "badge-neutral",
-    "abgelehnt": "badge-error",
+    "Initialisierung": "badge-info",
+    "Analyse & Bewertung": "badge-warning",
+    "Planung": "badge-primary",
+    "Umsetzung": "badge-success",
   };
-  const colorClass = colorMap[status] || "badge-ghost";
-  return <span className={`badge ${colorClass}`}>{status}</span>;
+  const colorClass = colorMap[bpfStatus] || "badge-ghost";
+  return <span className={`badge ${colorClass}`}>{bpfStatus}</span>;
 }
 
 // Ideen-Karte
@@ -69,9 +67,9 @@ function IdeaCard({ idea }: { idea: Idea }) {
   return (
     <Link href={`/ideas/${idea.id}`} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
       <div className="card-body p-4 sm:p-6">
-        {/* Status oben rechts */}
+        {/* BPF-Phase oben rechts */}
         <div className="flex justify-end mb-1">
-          <StatusBadge status={idea.status} />
+          <BpfStatusBadge bpfStatus={idea.bpfStatus} />
         </div>
         {/* Titel */}
         <h2 className="card-title text-base sm:text-lg line-clamp-2">{idea.title}</h2>

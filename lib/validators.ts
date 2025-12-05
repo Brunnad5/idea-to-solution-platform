@@ -78,6 +78,7 @@ export const ideaSchema = z.object({
   submittedByEmail: z.string().email().optional(), // E-Mail für Vergleiche
   type: z.string().optional(), // Typ (vom System gesetzt)
   status: ideaStatusSchema, // Aktueller Lifecycle-Status
+  bpfStatus: z.string().optional(), // Business Process Flow Status
   createdOn: z.string().datetime(), // Erstellungsdatum (ISO-String)
   modifiedOn: z.string().datetime().optional(), // Letztes Änderungsdatum
 

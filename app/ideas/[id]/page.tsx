@@ -65,8 +65,22 @@ const BPF_STAGES = [
   { name: "Umsetzung", order: 3 },
 ];
 
+// Lifecycle-Status Mapping (für Detail-Anzeige)
+const LIFECYCLE_STATUS_MAP: Record<string, { label: string; editable: boolean }> = {
+  "eingereicht": { label: "Eingereicht", editable: true },
+  "initialgeprüft": { label: "Idee in Qualitätsprüfung", editable: false },
+  "in Überarbeitung": { label: "Idee zur Überarbeitung an Ideengebenden", editable: true },
+  "in Detailanalyse": { label: "Idee in Detailanalyse", editable: false },
+  "zur Genehmigung": { label: "Genehmigt", editable: false },
+  "genehmigt": { label: "Genehmigt", editable: false },
+  "abgelehnt": { label: "Abgelehnt", editable: false },
+  "in Planung": { label: "Idee wird ITOT-Board vorgestellt", editable: false },
+  "in Umsetzung": { label: "In Umsetzung", editable: false },
+  "umgesetzt": { label: "Abgeschlossen", editable: false },
+};
+
 // Timeline-Komponente mit BPF-Daten
-function ProcessTimeline({ bpfStatus }: { bpfStatus: BpfStatus | null }) {
+function ProcessTimeline({ bpfStatus, lifecycleStatus }: { bpfStatus: BpfStatus | null; lifecycleStatus: string }) {
   // Wenn keine BPF-Daten, zeige Hinweis
   if (!bpfStatus) {
     return (
@@ -152,6 +166,22 @@ function ProcessTimeline({ bpfStatus }: { bpfStatus: BpfStatus | null }) {
           Nächste Phase: <span className="font-medium">{BPF_STAGES[currentStageIndex + 1].name}</span>
         </div>
       )}
+
+      {/* Lifecycle-Status */}
+      <div className="mt-4 pt-4 border-t border-base-300">
+        <div className="text-sm">
+          <span className="text-base-content/60">Detailstatus: </span>
+          <span className="font-medium">
+            {LIFECYCLE_STATUS_MAP[lifecycleStatus]?.label || lifecycleStatus}
+          </span>
+          {LIFECYCLE_STATUS_MAP[lifecycleStatus]?.editable && (
+            <span className="ml-2 text-xs badge badge-success badge-sm">Bearbeitbar</span>
+          )}
+          {LIFECYCLE_STATUS_MAP[lifecycleStatus] && !LIFECYCLE_STATUS_MAP[lifecycleStatus].editable && (
+            <span className="ml-2 text-xs badge badge-ghost badge-sm">Nicht bearbeitbar</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -338,7 +368,7 @@ export default async function IdeaDetailPage({ params }: PageProps) {
           </div>
 
           {/* Timeline */}
-          <ProcessTimeline bpfStatus={bpfStatus} />
+          <ProcessTimeline bpfStatus={bpfStatus} lifecycleStatus={idea.status} />
 
           {/* Zusätzliche Abschnitte (einklappbar) */}
           <div className="mt-6 space-y-4">

@@ -261,27 +261,60 @@ export async function fetchAllIdeas(): Promise<Idea[]> {
   const url = `${DATAVERSE_URL}/api/data/v9.2/${TABLE_NAME}?$orderby=createdon desc`;
 
   try {
-    const response = await fetch(url, {
-      headers: await createHeaders(),
-      cache: "no-store", // Immer frische Daten holen
-    });
+    // Parallel: Ideen und BPF-Status laden
+    const [ideasResponse, bpfResponse] = await Promise.all([
+      fetch(url, {
+        headers: await createHeaders(),
+        cache: "no-store",
+      }),
+      fetch(
+        `${DATAVERSE_URL}/api/data/v9.2/${BPF_TABLE_NAME}?` +
+        `$select=_bpf_cr6df_sgsw_digitalisierungsvorhabenid_value,activestageid` +
+        `&$expand=activestageid($select=stagename)`,
+        {
+          headers: await createHeaders(),
+          cache: "no-store",
+        }
+      ),
+    ]);
 
-    if (!response.ok) {
+    if (!ideasResponse.ok) {
       // Bei Fehlern: Log und Fallback auf Mock-Daten
-      console.error(`Dataverse Fehler: ${response.status} ${response.statusText}`);
+      console.error(`Dataverse Fehler: ${ideasResponse.status} ${ideasResponse.statusText}`);
       console.error(`URL: ${url}`);
       
-      if (response.status === 404) {
+      if (ideasResponse.status === 404) {
         console.error(`Tabelle "${TABLE_NAME}" nicht gefunden. Prüfe den EntitySetName in Dataverse.`);
-      } else if (response.status === 401) {
+      } else if (ideasResponse.status === 401) {
         console.error("Token abgelaufen oder ungültig. Bitte neuen Token holen.");
       }
       
       return getMockIdeas();
     }
 
-    const data = await response.json();
-    return (data.value || []).map(mapDataverseToIdea);
+    const ideasData = await ideasResponse.json();
+    
+    // BPF-Status in Map speichern (ideaId -> stageName)
+    const bpfMap = new Map<string, string>();
+    if (bpfResponse.ok) {
+      const bpfData = await bpfResponse.json();
+      (bpfData.value || []).forEach((bpf: any) => {
+        const ideaId = bpf._bpf_cr6df_sgsw_digitalisierungsvorhabenid_value;
+        const stageName = bpf.activestageid?.stagename;
+        if (ideaId && stageName) {
+          bpfMap.set(ideaId, stageName);
+        }
+      });
+    } else {
+      console.warn("BPF-Status konnten nicht geladen werden.");
+    }
+
+    // Ideen mappen und BPF-Status hinzufügen
+    return (ideasData.value || []).map((record: any) => {
+      const idea = mapDataverseToIdea(record);
+      const bpfStatus = bpfMap.get(idea.id);
+      return { ...idea, bpfStatus };
+    });
   } catch (error) {
     // Netzwerkfehler oder andere Probleme
     console.error("Fehler beim Laden der Ideen:", error);
