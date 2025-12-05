@@ -15,14 +15,16 @@ import { subscribeToIdea, unsubscribeFromIdea } from "@/app/actions/subscribeAct
 
 interface SubscribeButtonProps {
   ideaId: string;
-  subscribers: string[];
+  subscriber?: string; // Aktueller Abonnent (Name)
+  subscriberId?: string; // Aktueller Abonnent (GUID)
   submittedBy: string;
   onSubscribe?: () => void;
 }
 
 export default function SubscribeButton({ 
   ideaId, 
-  subscribers, 
+  subscriber,
+  subscriberId,
   submittedBy,
   onSubscribe 
 }: SubscribeButtonProps) {
@@ -30,7 +32,12 @@ export default function SubscribeButton({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   
-  const isSubscribed = user ? subscribers.includes(user.name) : false;
+  // User ist abonniert wenn sein Name mit dem Abonnenten übereinstimmt
+  const isSubscribed = user ? subscriber === user.name : false;
+  
+  // Azure AD Object ID aus Auth Token
+  // Wird server-seitig zu SystemUser GUID gemappt
+  const azureAdId = user?.id;
 
   // Nicht angemeldet → kein Button
   if (!isAuthenticated || !user) {
@@ -46,14 +53,14 @@ export default function SubscribeButton({
       return;
     }
 
-    if (!user) return;
+    if (!user || !azureAdId) return;
 
     startTransition(async () => {
       setError(null);
       
       const result = isSubscribed
-        ? await unsubscribeFromIdea(ideaId, subscribers, user.name)
-        : await subscribeToIdea(ideaId, subscribers, user.name);
+        ? await unsubscribeFromIdea(ideaId)
+        : await subscribeToIdea(ideaId, azureAdId);
 
       if (!result.success) {
         setError(result.error || "Fehler beim Speichern");

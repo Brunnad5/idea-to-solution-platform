@@ -374,7 +374,7 @@ export default async function IdeaDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Abonnenten */}
+            {/* Abonnent (Single-Select) */}
             <div className="sm:col-span-2">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -382,17 +382,16 @@ export default async function IdeaDetailPage({ params }: PageProps) {
                     <User className="h-5 w-5 text-base-content/60" />
                   </div>
                   <div>
-                    <p className="text-xs text-base-content/60">Abonnenten</p>
+                    <p className="text-xs text-base-content/60">Abonnent</p>
                     <p className="font-medium">
-                      {idea.subscribers && idea.subscribers.length > 0
-                        ? idea.subscribers.join(", ")
-                        : "Keine Abonnenten"}
+                      {idea.subscriber || "Kein Abonnent"}
                     </p>
                   </div>
                 </div>
                 <SubscribeButton 
                   ideaId={id}
-                  subscribers={idea.subscribers || []}
+                  subscriber={idea.subscriber}
+                  subscriberId={idea.subscriberId}
                   submittedBy={idea.submittedBy}
                 />
               </div>

@@ -80,7 +80,8 @@ export const ideaSchema = z.object({
   status: ideaStatusSchema, // Aktueller Lifecycle-Status
   bpfStatus: z.string().optional(), // Business Process Flow Status
   responsiblePerson: z.string().optional(), // Verantwortliche Person
-  subscribers: z.array(z.string()).optional(), // Abonnenten (Namen)
+  subscriber: z.string().optional(), // Abonnent (Name) - Single-Select Lookup
+  subscriberId: z.string().optional(), // Abonnent GUID (für PATCH)
   createdOn: z.string().datetime(), // Erstellungsdatum (ISO-String)
   modifiedOn: z.string().datetime().optional(), // Letztes Änderungsdatum
 

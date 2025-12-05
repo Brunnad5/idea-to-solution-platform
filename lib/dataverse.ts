@@ -62,7 +62,8 @@ const FIELD_MAP = {
   status: "cr6df_lifecyclestatus",
   responsiblePerson: "_cr6df_verantwortlicher_value", // Lookup-Feld
   responsiblePersonName: "_cr6df_verantwortlicher_value@OData.Community.Display.V1.FormattedValue",
-  subscribers: "cr6df_abonnenten", // Multi-line Text oder Lookup
+  subscriber: "_cr6df_abonnenten_value", // Lookup-Feld (Single-Select)
+  subscriberName: "_cr6df_abonnenten_value@OData.Community.Display.V1.FormattedValue",
   createdOn: "createdon",
   modifiedOn: "modifiedon",
   // Initialprüfung
@@ -159,11 +160,9 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
   // Verantwortliche Person: Formatierter Name oder undefined
   const responsiblePerson = record[FIELD_MAP.responsiblePersonName] as string | undefined;
 
-  // Abonnenten: Falls Multiline-Text, splitten; sonst leeres Array
-  const subscribersRaw = record[FIELD_MAP.subscribers] as string | undefined;
-  const subscribers = subscribersRaw 
-    ? subscribersRaw.split(';').map(s => s.trim()).filter(Boolean)
-    : undefined;
+  // Abonnent: Single-Select Lookup
+  const subscriber = record[FIELD_MAP.subscriberName] as string | undefined;
+  const subscriberId = record[FIELD_MAP.subscriber] as string | undefined;
 
   // Initialprüfungs-Felder (können OptionSets sein, daher FormattedValue verwenden)
   const initialReviewReason = record[FIELD_MAP.initialReviewReason] as string | undefined;
@@ -182,7 +181,8 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
     type,
     status,
     responsiblePerson,
-    subscribers,
+    subscriber,
+    subscriberId,
     createdOn: record[FIELD_MAP.createdOn] as string,
     modifiedOn: record[FIELD_MAP.modifiedOn] as string | undefined,
     // Initialprüfung
