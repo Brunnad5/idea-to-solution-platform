@@ -22,8 +22,7 @@ import {
   MessageSquare,
   Shield,
   Tag, 
-  User,
-  XCircle
+  User
 } from "lucide-react";
 import { Idea } from "@/lib/validators";
 

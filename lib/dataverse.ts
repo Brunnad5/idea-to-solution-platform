@@ -488,3 +488,156 @@ function getMockIdeas(): Idea[] {
     },
   ];
 }
+
+// ============================================
+// BUSINESS PROCESS FLOW (BPF)
+// ============================================
+
+/**
+ * Stage im Business Process Flow.
+ */
+export interface BpfStage {
+  stageName: string;
+  stageCategory: number; // 0 = Initialisierung, 1 = Analyse & Bewertung, 2 = Planung, 3 = Umsetzung
+  stageId: string;
+}
+
+/**
+ * Aktueller BPF-Status einer Idee.
+ */
+export interface BpfStatus {
+  activeStage: {
+    stageName: string;
+    stageCategory: number;
+  };
+  activeStageStartedOn: string;
+  completedOn: string | null;
+  stateCode: number; // 0 = Active, 1 = Completed
+  statusCode: number;
+}
+
+/**
+ * Holt den aktuellen BPF-Status einer Idee.
+ * 
+ * @param ideaId - Die GUID der Idee
+ * @returns BpfStatus oder null wenn nicht gefunden
+ */
+export async function fetchBpfStatus(ideaId: string): Promise<BpfStatus | null> {
+  if (!isDataverseConfigured()) {
+    console.warn("Dataverse ist nicht konfiguriert. BPF-Status kann nicht geladen werden.");
+    return null;
+  }
+
+  try {
+    const token = await getAccessToken();
+    if (!token) {
+      console.warn("Kein Access Token verfügbar. BPF-Status kann nicht geladen werden.");
+      return null;
+    }
+
+    const url = `${DATAVERSE_URL}/api/data/v9.2/${BPF_TABLE_NAME}?` +
+      `$select=activestageid,activestagestartedon,completedon,statecode,statuscode` +
+      `&$filter=_bpf_${TABLE_NAME.slice(0, -1)}_value eq ${ideaId}` +
+      `&$expand=activestageid($select=stagename,stagecategory)`;
+
+    const response = await fetch(url, {
+      headers: await createHeaders(),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`Fehler beim Laden des BPF-Status: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    // Erstes Ergebnis nehmen (sollte nur eines geben)
+    if (!data.value || data.value.length === 0) {
+      console.warn(`Kein BPF-Eintrag für Idee ${ideaId} gefunden.`);
+      return null;
+    }
+
+    const record = data.value[0];
+    
+    return {
+      activeStage: {
+        stageName: record.activestageid?.stagename || "Unbekannt",
+        stageCategory: record.activestageid?.stagecategory ?? 0,
+      },
+      activeStageStartedOn: record.activestagestartedon,
+      completedOn: record.completedon,
+      stateCode: record.statecode,
+      statusCode: record.statuscode,
+    };
+  } catch (error) {
+    console.error("Fehler beim Laden des BPF-Status:", error);
+    return null;
+  }
+}
+
+/**
+ * Holt alle Stages des BPF (für die Timeline-Visualisierung).
+ * 
+ * @param processId - Die GUID der BPF-Definition (optional, kann aus ENV kommen)
+ * @returns Array von BpfStage oder leeres Array
+ */
+export async function fetchBpfStages(processId?: string): Promise<BpfStage[]> {
+  // Fallback: Standard-Stages wenn API nicht erreichbar
+  const defaultStages: BpfStage[] = [
+    { stageName: "Initialisierung", stageCategory: 0, stageId: "stage-0" },
+    { stageName: "Analyse & Bewertung", stageCategory: 1, stageId: "stage-1" },
+    { stageName: "Planung", stageCategory: 2, stageId: "stage-2" },
+    { stageName: "Umsetzung", stageCategory: 3, stageId: "stage-3" },
+  ];
+
+  if (!isDataverseConfigured()) {
+    console.warn("Dataverse ist nicht konfiguriert. Verwende Standard-Stages.");
+    return defaultStages;
+  }
+
+  // Wenn keine processId angegeben, verwende Fallback
+  if (!processId) {
+    console.warn("Keine BPF Process-ID konfiguriert. Verwende Standard-Stages.");
+    return defaultStages;
+  }
+
+  try {
+    const token = await getAccessToken();
+    if (!token) {
+      console.warn("Kein Access Token verfügbar. Verwende Standard-Stages.");
+      return defaultStages;
+    }
+
+    const url = `${DATAVERSE_URL}/api/data/v9.2/processstages?` +
+      `$select=stagename,stagecategory,processstageid` +
+      `&$filter=processid eq ${processId}` +
+      `&$orderby=stagecategory asc`;
+
+    const response = await fetch(url, {
+      headers: await createHeaders(),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`Fehler beim Laden der BPF-Stages: ${response.status} ${response.statusText}`);
+      return defaultStages;
+    }
+
+    const data = await response.json();
+    
+    if (!data.value || data.value.length === 0) {
+      console.warn("Keine BPF-Stages gefunden. Verwende Standard-Stages.");
+      return defaultStages;
+    }
+
+    return data.value.map((stage: any) => ({
+      stageName: stage.stagename,
+      stageCategory: stage.stagecategory,
+      stageId: stage.processstageid,
+    }));
+  } catch (error) {
+    console.error("Fehler beim Laden der BPF-Stages:", error);
+    return defaultStages;
+  }
+}
