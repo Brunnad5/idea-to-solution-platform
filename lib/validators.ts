@@ -79,6 +79,8 @@ export const ideaSchema = z.object({
   type: z.string().optional(), // Typ (vom System gesetzt)
   status: ideaStatusSchema, // Aktueller Lifecycle-Status
   bpfStatus: z.string().optional(), // Business Process Flow Status
+  responsiblePerson: z.string().optional(), // Verantwortliche Person
+  subscribers: z.array(z.string()).optional(), // Abonnenten (Namen)
   createdOn: z.string().datetime(), // Erstellungsdatum (ISO-String)
   modifiedOn: z.string().datetime().optional(), // Letztes Änderungsdatum
 

@@ -60,6 +60,9 @@ const FIELD_MAP = {
   submittedByName: "_createdby_value@OData.Community.Display.V1.FormattedValue", // Anzeigename
   type: "cr6df_typ", // OptionSet (Choice) mit numerischen Werten
   status: "cr6df_lifecyclestatus",
+  responsiblePerson: "_cr6df_verantwortlicher_value", // Lookup-Feld
+  responsiblePersonName: "_cr6df_verantwortlicher_value@OData.Community.Display.V1.FormattedValue",
+  subscribers: "cr6df_abonnenten", // Multi-line Text oder Lookup
   createdOn: "createdon",
   modifiedOn: "modifiedon",
   // Initialprüfung
@@ -153,6 +156,15 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
   // Typ: Numerischen Wert in lesbaren String umwandeln
   const type = mapTypeValue(record[FIELD_MAP.type]);
 
+  // Verantwortliche Person: Formatierter Name oder undefined
+  const responsiblePerson = record[FIELD_MAP.responsiblePersonName] as string | undefined;
+
+  // Abonnenten: Falls Multiline-Text, splitten; sonst leeres Array
+  const subscribersRaw = record[FIELD_MAP.subscribers] as string | undefined;
+  const subscribers = subscribersRaw 
+    ? subscribersRaw.split(';').map(s => s.trim()).filter(Boolean)
+    : undefined;
+
   // Initialprüfungs-Felder (können OptionSets sein, daher FormattedValue verwenden)
   const initialReviewReason = record[FIELD_MAP.initialReviewReason] as string | undefined;
   const complexity = record[`${FIELD_MAP.complexity}@OData.Community.Display.V1.FormattedValue`] as string | undefined
@@ -169,6 +181,8 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
     submittedById,
     type,
     status,
+    responsiblePerson,
+    subscribers,
     createdOn: record[FIELD_MAP.createdOn] as string,
     modifiedOn: record[FIELD_MAP.modifiedOn] as string | undefined,
     // Initialprüfung

@@ -10,6 +10,7 @@ import { notFound } from "next/navigation";
 import { fetchIdeaById, fetchBpfStatus, BpfStatus } from "@/lib/dataverse";
 import { IdeaStatus } from "@/lib/validators";
 import EditButton from "@/components/EditButton";
+import SubscribeButton from "@/components/SubscribeButton";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -36,24 +37,6 @@ function formatDate(dateString: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-// Hilfsfunktion: Status-Badge mit passender Farbe
-function StatusBadge({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    "eingereicht": "badge-info",
-    "initialgeprüft": "badge-info",
-    "in Überarbeitung": "badge-warning",
-    "in Detailanalyse": "badge-warning",
-    "zur Genehmigung": "badge-warning",
-    "genehmigt": "badge-success",
-    "in Planung": "badge-primary",
-    "in Umsetzung": "badge-primary",
-    "umgesetzt": "badge-neutral",
-    "abgelehnt": "badge-error",
-  };
-  const colorClass = colorMap[status] || "badge-ghost";
-  return <span className={`badge badge-lg ${colorClass}`}>{status}</span>;
 }
 
 // BPF Stages (Phasen)
@@ -348,13 +331,10 @@ export default async function IdeaDetailPage({ params }: PageProps) {
       {/* Haupt-Card */}
       <div className="card bg-base-100 shadow-lg">
         <div className="card-body">
-          {/* Header: Titel und Status */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <Lightbulb className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
-              <h1 className="text-2xl font-bold">{idea.title}</h1>
-            </div>
-            <StatusBadge status={idea.status} />
+          {/* Header: Titel */}
+          <div className="flex items-start gap-3">
+            <Lightbulb className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+            <h1 className="text-2xl font-bold">{idea.title}</h1>
           </div>
 
           {/* Beschreibung */}
@@ -381,6 +361,43 @@ export default async function IdeaDetailPage({ params }: PageProps) {
 
           {/* Meta-Informationen */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Verantwortliche Person */}
+            <div className="flex items-center gap-3">
+              <div className="bg-base-200 p-2 rounded-lg">
+                <Shield className="h-5 w-5 text-base-content/60" />
+              </div>
+              <div>
+                <p className="text-xs text-base-content/60">Verantwortliche/r</p>
+                <p className="font-medium">
+                  {idea.responsiblePerson || "Keine verantwortliche Person definiert"}
+                </p>
+              </div>
+            </div>
+
+            {/* Abonnenten */}
+            <div className="sm:col-span-2">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-base-200 p-2 rounded-lg">
+                    <User className="h-5 w-5 text-base-content/60" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-base-content/60">Abonnenten</p>
+                    <p className="font-medium">
+                      {idea.subscribers && idea.subscribers.length > 0
+                        ? idea.subscribers.join(", ")
+                        : "Keine Abonnenten"}
+                    </p>
+                  </div>
+                </div>
+                <SubscribeButton 
+                  ideaId={id}
+                  subscribers={idea.subscribers || []}
+                  submittedBy={idea.submittedBy}
+                />
+              </div>
+            </div>
+
             {/* Eingereicht von */}
             <div className="flex items-center gap-3">
               <div className="bg-base-200 p-2 rounded-lg">
@@ -433,7 +450,11 @@ export default async function IdeaDetailPage({ params }: PageProps) {
           {/* Aktionen */}
           <div className="divider"></div>
           <div className="flex justify-end">
-            <EditButton ideaId={id} createdByGuid={idea.submittedById} />
+            <EditButton 
+              ideaId={id} 
+              createdByGuid={idea.submittedById}
+              isEditable={LIFECYCLE_STATUS_MAP[idea.status]?.editable ?? false}
+            />
           </div>
         </div>
       </div>

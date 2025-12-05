@@ -19,9 +19,11 @@ interface EditButtonProps {
   ideaId: string;
   // createdByGuid: Optional die GUID des Erstellers aus Dataverse
   createdByGuid?: string;
+  // isEditable: Ob die Idee basierend auf dem Lifecycle-Status bearbeitbar ist
+  isEditable: boolean;
 }
 
-export default function EditButton({ ideaId, createdByGuid }: EditButtonProps) {
+export default function EditButton({ ideaId, createdByGuid, isEditable }: EditButtonProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
 
   // Loading-Zustand
@@ -62,13 +64,26 @@ export default function EditButton({ ideaId, createdByGuid }: EditButtonProps) {
     );
   }
 
+  // Nicht bearbeitbar → Disabled Button
+  if (!isEditable) {
+    return (
+      <button 
+        className="btn btn-primary gap-2 btn-disabled"
+        disabled
+      >
+        <Edit className="h-4 w-4" />
+        Bearbeiten
+      </button>
+    );
+  }
+
   return (
     <Link 
       href={`/ideas/${ideaId}/edit`}
       className="btn btn-primary gap-2"
     >
       <Edit className="h-4 w-4" />
-      Beschreibung bearbeiten
+      Bearbeiten
     </Link>
   );
 }
