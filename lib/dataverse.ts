@@ -45,7 +45,7 @@ const TABLE_NAME = "cr6df_sgsw_digitalisierungsvorhabens";
  * EntitySetName der Business Process Flow Tabelle.
  * Wird für die Prozess-Visualisierung verwendet.
  */
-const BPF_TABLE_NAME = "cr6df_ideatosolutions";
+const BPF_TABLE_NAME = "cr6df_ideatosolution";
 
 /**
  * Mapping zwischen unseren Feldnamen und den Dataverse-Feldnamen.
