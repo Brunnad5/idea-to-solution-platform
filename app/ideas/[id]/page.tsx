@@ -57,11 +57,12 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // BPF Stages (Phasen)
+// Dataverse gibt stagecategory=-1 zurück, daher verwenden wir stagename für Zuordnung
 const BPF_STAGES = [
-  { name: "Initialisierung", category: 0 },
-  { name: "Analyse & Bewertung", category: 1 },
-  { name: "Planung", category: 2 },
-  { name: "Umsetzung", category: 3 },
+  { name: "Initialisierung", order: 0 },
+  { name: "Analyse & Bewertung", order: 1 },
+  { name: "Planung", order: 2 },
+  { name: "Umsetzung", order: 3 },
 ];
 
 // Timeline-Komponente mit BPF-Daten
@@ -81,7 +82,8 @@ function ProcessTimeline({ bpfStatus }: { bpfStatus: BpfStatus | null }) {
     );
   }
 
-  const currentStageCategory = bpfStatus.activeStage.stageCategory;
+  // Aktuelle Stage anhand des Namens finden
+  const currentStageIndex = BPF_STAGES.findIndex(s => s.name === bpfStatus.activeStage.stageName);
   const isCompleted = bpfStatus.stateCode === 1;
 
   // Datum formatieren
@@ -121,9 +123,9 @@ function ProcessTimeline({ bpfStatus }: { bpfStatus: BpfStatus | null }) {
 
       {/* Timeline */}
       <ul className="steps steps-vertical lg:steps-horizontal w-full">
-        {BPF_STAGES.map((stage) => {
-          const isStageCompleted = currentStageCategory > stage.category || isCompleted;
-          const isCurrent = currentStageCategory === stage.category && !isCompleted;
+        {BPF_STAGES.map((stage, index) => {
+          const isStageCompleted = currentStageIndex > index || isCompleted;
+          const isCurrent = currentStageIndex === index && !isCompleted;
           
           let stepClass = "";
           if (isStageCompleted) stepClass = "step-success";
@@ -131,9 +133,9 @@ function ProcessTimeline({ bpfStatus }: { bpfStatus: BpfStatus | null }) {
           
           return (
             <li 
-              key={stage.category} 
+              key={stage.order} 
               className={`step ${stepClass}`}
-              data-content={isStageCompleted ? "✓" : (stage.category + 1).toString()}
+              data-content={isStageCompleted ? "✓" : (stage.order + 1).toString()}
             >
               <span className={`text-xs ${isCurrent ? "font-bold" : ""}`}>
                 {stage.name}
@@ -144,10 +146,10 @@ function ProcessTimeline({ bpfStatus }: { bpfStatus: BpfStatus | null }) {
       </ul>
 
       {/* Nächste Phase */}
-      {!isCompleted && currentStageCategory < BPF_STAGES.length - 1 && (
+      {!isCompleted && currentStageIndex >= 0 && currentStageIndex < BPF_STAGES.length - 1 && (
         <div className="mt-4 text-sm text-base-content/60 flex items-center gap-2">
           <Check className="h-4 w-4" />
-          Nächste Phase: <span className="font-medium">{BPF_STAGES[currentStageCategory + 1].name}</span>
+          Nächste Phase: <span className="font-medium">{BPF_STAGES[currentStageIndex + 1].name}</span>
         </div>
       )}
     </div>

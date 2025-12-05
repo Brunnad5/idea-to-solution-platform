@@ -45,7 +45,7 @@ const TABLE_NAME = "cr6df_sgsw_digitalisierungsvorhabens";
  * EntitySetName der Business Process Flow Tabelle.
  * Wird für die Prozess-Visualisierung verwendet.
  */
-const BPF_TABLE_NAME = "cr6df_ideatosolution";
+const BPF_TABLE_NAME = "cr6df_ideatosolutions";
 
 /**
  * Mapping zwischen unseren Feldnamen und den Dataverse-Feldnamen.
@@ -537,7 +537,7 @@ export async function fetchBpfStatus(ideaId: string): Promise<BpfStatus | null> 
 
     const url = `${DATAVERSE_URL}/api/data/v9.2/${BPF_TABLE_NAME}?` +
       `$select=activestageid,activestagestartedon,completedon,statecode,statuscode` +
-      `&$filter=_bpf_${TABLE_NAME.slice(0, -1)}_value eq ${ideaId}` +
+      `&$filter=_bpf_cr6df_sgsw_digitalisierungsvorhabenid_value eq '${ideaId}'` +
       `&$expand=activestageid($select=stagename,stagecategory)`;
 
     const response = await fetch(url, {
@@ -546,7 +546,9 @@ export async function fetchBpfStatus(ideaId: string): Promise<BpfStatus | null> 
     });
 
     if (!response.ok) {
-      console.error(`Fehler beim Laden des BPF-Status: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`[BPF] Fehler beim Laden des BPF-Status: ${response.status} ${response.statusText}`);
+      console.error(`[BPF] Error Response:`, errorText);
       return null;
     }
 
@@ -554,7 +556,7 @@ export async function fetchBpfStatus(ideaId: string): Promise<BpfStatus | null> 
     
     // Erstes Ergebnis nehmen (sollte nur eines geben)
     if (!data.value || data.value.length === 0) {
-      console.warn(`Kein BPF-Eintrag für Idee ${ideaId} gefunden.`);
+      console.warn(`[BPF] Kein BPF-Eintrag für Idee ${ideaId} gefunden.`);
       return null;
     }
 
