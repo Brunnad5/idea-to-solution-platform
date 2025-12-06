@@ -72,13 +72,14 @@ export default function SubscribeButton({
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-end gap-1" suppressHydrationWarning>
       <button
         onClick={handleToggleSubscribe}
         disabled={isPending || (isSubmitter && isSubscribed)}
         className={`btn btn-sm gap-2 ${
           isSubscribed ? "btn-ghost" : "btn-outline"
         } ${isSubmitter && isSubscribed ? "btn-disabled" : ""}`}
+        suppressHydrationWarning
       >
         {isPending ? (
           <span className="loading loading-spinner loading-xs"></span>

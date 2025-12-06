@@ -34,7 +34,7 @@ export default function EditButton({ ideaId, createdByGuid, isEditable }: EditBu
   // Nicht angemeldet → kein Button
   if (!isAuthenticated || !user) {
     return (
-      <div className="text-sm text-base-content/50 text-center">
+      <div className="text-sm text-base-content/50 text-center" suppressHydrationWarning>
         Melde dich an, um diese Idee zu bearbeiten.
       </div>
     );
@@ -58,7 +58,7 @@ export default function EditButton({ ideaId, createdByGuid, isEditable }: EditBu
 
   if (!isOwner) {
     return (
-      <div className="text-sm text-base-content/50 text-center">
+      <div className="text-sm text-base-content/50 text-center" suppressHydrationWarning>
         Nur der Ersteller kann diese Idee bearbeiten.
       </div>
     );
@@ -70,6 +70,7 @@ export default function EditButton({ ideaId, createdByGuid, isEditable }: EditBu
       <button 
         className="btn btn-primary gap-2 btn-disabled"
         disabled
+        suppressHydrationWarning
       >
         <Edit className="h-4 w-4" />
         Bearbeiten
@@ -81,6 +82,7 @@ export default function EditButton({ ideaId, createdByGuid, isEditable }: EditBu
     <Link 
       href={`/ideas/${ideaId}/edit`}
       className="btn btn-primary gap-2"
+      suppressHydrationWarning
     >
       <Edit className="h-4 w-4" />
       Bearbeiten

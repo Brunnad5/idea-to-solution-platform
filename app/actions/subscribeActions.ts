@@ -15,35 +15,48 @@ const TABLE_NAME = "cr6df_sgsw_digitalisierungsvorhabens";
  * Holt den Access Token (aus Cookie oder ENV)
  */
 async function getAccessToken(): Promise<string | null> {
-  const { cookies } = await import("next/headers");
-  const cookieStore = await cookies();
-  const tokenFromCookie = cookieStore.get("dataverse_token")?.value;
-  return tokenFromCookie || process.env.DATAVERSE_ACCESS_TOKEN || null;
+  try {
+    // Direkt aus ENV lesen - stabiler für Server Actions
+    if (process.env.DATAVERSE_ACCESS_TOKEN) {
+      return process.env.DATAVERSE_ACCESS_TOKEN;
+    }
+    
+    // Fallback: Cookie probieren (funktioniert nicht immer in Server Actions)
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const tokenFromCookie = cookieStore.get("dataverse_token")?.value;
+    return tokenFromCookie || null;
+  } catch (error) {
+    console.error("[TOKEN] Fehler beim Token-Zugriff:", error);
+    return process.env.DATAVERSE_ACCESS_TOKEN || null;
+  }
 }
 
 /**
- * Findet die SystemUser GUID anhand der Azure AD Object ID.
+ * Findet die Mitarbeiter-ID anhand der Azure AD Object ID.
+ * Prüft ob der User sowohl als SystemUser als auch in cr6df_sgsw_mitarbeitendes existiert.
  * 
  * @param azureAdObjectId - Die Azure AD Object ID aus dem Auth Token
- * @returns SystemUser GUID oder null wenn nicht gefunden
+ * @returns Mitarbeiter GUID aus cr6df_sgsw_mitarbeitendes oder null
  */
-async function getSystemUserIdFromAzureId(
+async function getMitarbeiterIdFromAzureId(
   azureAdObjectId: string
-): Promise<string | null> {
+): Promise<{ mitarbeiterId: string | null; error?: string }> {
   try {
     const token = await getAccessToken();
     if (!token) {
-      console.error("[SYSTEMUSER] Kein Access Token verfügbar");
-      return null;
+      console.error("[MITARBEITER] Kein Access Token verfügbar");
+      return { mitarbeiterId: null, error: "Kein Access Token" };
     }
 
-    const url = `${DATAVERSE_URL}/api/data/v9.2/systemusers?` +
+    // Schritt 1: Azure AD ID -> SystemUser GUID
+    const systemUserUrl = `${DATAVERSE_URL}/api/data/v9.2/systemusers?` +
       `$select=systemuserid` +
       `&$filter=azureactivedirectoryobjectid eq '${azureAdObjectId}'`;
 
-    console.log("[SYSTEMUSER] Lookup URL:", url);
+    console.log("[MITARBEITER] SystemUser Lookup:", systemUserUrl);
 
-    const response = await fetch(url, {
+    const systemUserResponse = await fetch(systemUserUrl, {
       headers: {
         "Authorization": `Bearer ${token}`,
         "OData-MaxVersion": "4.0",
@@ -53,26 +66,51 @@ async function getSystemUserIdFromAzureId(
       cache: "no-store",
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[SYSTEMUSER] Fehler ${response.status}:`, errorText);
-      return null;
+    if (!systemUserResponse.ok) {
+      const errorText = await systemUserResponse.text();
+      console.error(`[MITARBEITER] SystemUser Fehler ${systemUserResponse.status}:`, errorText);
+      return { mitarbeiterId: null, error: "SystemUser nicht gefunden" };
     }
 
-    const data = await response.json();
+    const systemUserData = await systemUserResponse.json();
     
-    if (!data.value || data.value.length === 0) {
-      console.warn(`[SYSTEMUSER] Kein SystemUser für Azure AD ID ${azureAdObjectId} gefunden`);
-      return null;
+    if (!systemUserData.value || systemUserData.value.length === 0) {
+      console.warn(`[MITARBEITER] Kein SystemUser für Azure AD ID ${azureAdObjectId}`);
+      return { mitarbeiterId: null, error: "Du bist nicht in Dataverse authentifiziert" };
     }
 
-    const systemUserId = data.value[0].systemuserid;
-    console.log(`[SYSTEMUSER] Gefunden: Azure AD ${azureAdObjectId} -> SystemUser ${systemUserId}`);
+    const systemUserId = systemUserData.value[0].systemuserid;
+    console.log(`[MITARBEITER] SystemUser gefunden: ${systemUserId}`);
+
+    // Schritt 2: Prüfe ob Mitarbeiter in cr6df_sgsw_mitarbeitendes existiert
+    const mitarbeiterUrl = `${DATAVERSE_URL}/api/data/v9.2/cr6df_sgsw_mitarbeitendes(${systemUserId})`;
     
-    return systemUserId;
+    console.log("[MITARBEITER] Mitarbeiter Lookup:", mitarbeiterUrl);
+
+    const mitarbeiterResponse = await fetch(mitarbeiterUrl, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "OData-MaxVersion": "4.0",
+        "OData-Version": "4.0",
+        "Accept": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!mitarbeiterResponse.ok) {
+      console.warn(`[MITARBEITER] Nicht in Mitarbeiter-Tabelle: ${mitarbeiterResponse.status}`);
+      return { 
+        mitarbeiterId: null, 
+        error: "Du musst zuerst als Mitarbeiter in Dataverse angelegt werden. Bitte kontaktiere einen Administrator." 
+      };
+    }
+
+    console.log(`[MITARBEITER] ✅ Mitarbeiter-Eintrag existiert: ${systemUserId}`);
+    return { mitarbeiterId: systemUserId };
+    
   } catch (error) {
-    console.error("[SYSTEMUSER] Fehler beim Lookup:", error);
-    return null;
+    console.error("[MITARBEITER] Fehler:", error);
+    return { mitarbeiterId: null, error: "Technischer Fehler beim Lookup" };
   }
 }
 
@@ -97,8 +135,9 @@ export async function setSubscriber(
     const url = `${DATAVERSE_URL}/api/data/v9.2/${TABLE_NAME}(${ideaId})`;
     
     // Body: Lookup setzen oder entfernen
+    // WICHTIG: EntitySet Name ist PLURAL: cr6df_sgsw_mitarbeitendes (mit "s")
     const body = userId
-      ? { "cr6df_abonnenten@odata.bind": `/systemusers(${userId})` }
+      ? { "cr6df_abonnenten@odata.bind": `/cr6df_sgsw_mitarbeitendes(${userId})` }
       : { "cr6df_abonnenten@odata.bind": null };
     
     console.log("[SUBSCRIBE] PATCH URL:", url);
@@ -158,17 +197,17 @@ export async function subscribeToIdea(
   ideaId: string,
   azureAdObjectId: string
 ): Promise<{ success: boolean; error?: string }> {
-  // Azure AD ID -> SystemUser GUID mappen
-  const systemUserId = await getSystemUserIdFromAzureId(azureAdObjectId);
+  // Azure AD ID -> Mitarbeiter ID (mit Existenz-Check)
+  const result = await getMitarbeiterIdFromAzureId(azureAdObjectId);
   
-  if (!systemUserId) {
+  if (!result.mitarbeiterId) {
     return { 
       success: false, 
-      error: "SystemUser konnte nicht gefunden werden. Bist du in Dataverse als Benutzer angelegt?" 
+      error: result.error || "Mitarbeiter konnte nicht gefunden werden" 
     };
   }
   
-  return setSubscriber(ideaId, systemUserId);
+  return setSubscriber(ideaId, result.mitarbeiterId);
 }
 
 /**
