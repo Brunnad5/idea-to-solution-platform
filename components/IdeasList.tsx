@@ -13,26 +13,51 @@ import { Calendar, FolderKanban, Lightbulb, Rocket, User } from "lucide-react";
 import { Idea } from "@/lib/validators";
 import IdeaFilters from "./IdeaFilters";
 
-// Die drei Typen in der gewünschten Reihenfolge
+// Die vier BPF-Phasen in der gewünschten Reihenfolge
+const BPF_PHASES = ["Initialisierung", "Analyse & Bewertung", "Planung", "Umsetzung"] as const;
+type BpfPhase = (typeof BPF_PHASES)[number];
+
+// Icons und Farben für jede Phase
+const PHASE_CONFIG: Record<BpfPhase, { icon: React.ReactNode; color: string; description: string }> = {
+  "Initialisierung": {
+    icon: <Lightbulb className="h-5 w-5" />,
+    color: "text-info",
+    description: "Neue Ideen werden initial geprüft",
+  },
+  "Analyse & Bewertung": {
+    icon: <Calendar className="h-5 w-5" />,
+    color: "text-warning",
+    description: "Detaillierte Analyse und Bewertung",
+  },
+  "Planung": {
+    icon: <FolderKanban className="h-5 w-5" />,
+    color: "text-primary",
+    description: "Konkrete Planung und Vorbereitung",
+  },
+  "Umsetzung": {
+    icon: <Rocket className="h-5 w-5" />,
+    color: "text-success",
+    description: "Aktive Umsetzung der Ideen",
+  },
+};
+
+// Die drei Typen für Badges
 const IDEA_TYPES = ["Idee", "Vorhaben", "Projekt"] as const;
 type IdeaType = (typeof IDEA_TYPES)[number];
 
-// Icons und Farben für jeden Typ
-const TYPE_CONFIG: Record<IdeaType, { icon: React.ReactNode; color: string; description: string }> = {
+// Icons für jeden Typ (für Badges)
+const TYPE_CONFIG: Record<IdeaType, { icon: React.ReactNode; color: string }> = {
   Idee: {
-    icon: <Lightbulb className="h-5 w-5" />,
-    color: "text-warning",
-    description: "Neue Ideen und Vorschläge",
+    icon: <Lightbulb className="h-4 w-4" />,
+    color: "badge-warning",
   },
   Vorhaben: {
-    icon: <FolderKanban className="h-5 w-5" />,
-    color: "text-info",
-    description: "Geplante Vorhaben",
+    icon: <FolderKanban className="h-4 w-4" />,
+    color: "badge-info",
   },
   Projekt: {
-    icon: <Rocket className="h-5 w-5" />,
-    color: "text-success",
-    description: "Aktive Projekte",
+    icon: <Rocket className="h-4 w-4" />,
+    color: "badge-success",
   },
 };
 
@@ -46,20 +71,20 @@ function formatDate(dateString: string): string {
   });
 }
 
-// BPF Status-Badge
-function BpfStatusBadge({ bpfStatus }: { bpfStatus?: string }) {
-  if (!bpfStatus) {
-    return <span className="badge badge-ghost">Keine Phase</span>;
+// Typ-Badge (klein, für in der Karte)
+function TypeBadge({ type }: { type?: string }) {
+  const ideaType = type as IdeaType | undefined;
+  if (!ideaType || !(ideaType in TYPE_CONFIG)) {
+    return null;
   }
-
-  const colorMap: Record<string, string> = {
-    "Initialisierung": "badge-info",
-    "Analyse & Bewertung": "badge-warning",
-    "Planung": "badge-primary",
-    "Umsetzung": "badge-success",
-  };
-  const colorClass = colorMap[bpfStatus] || "badge-ghost";
-  return <span className={`badge ${colorClass}`}>{bpfStatus}</span>;
+  
+  const config = TYPE_CONFIG[ideaType];
+  return (
+    <span className={`badge ${config.color} badge-sm flex items-center gap-1`}>
+      {config.icon}
+      {ideaType}
+    </span>
+  );
 }
 
 // Ideen-Karte
@@ -67,9 +92,9 @@ function IdeaCard({ idea }: { idea: Idea }) {
   return (
     <Link href={`/ideas/${idea.id}`} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
       <div className="card-body p-4 sm:p-6">
-        {/* BPF-Phase oben rechts */}
+        {/* Typ-Badge oben rechts */}
         <div className="flex justify-end mb-1">
-          <BpfStatusBadge bpfStatus={idea.bpfStatus} />
+          <TypeBadge type={idea.type} />
         </div>
         {/* Titel */}
         <h2 className="card-title text-base sm:text-lg line-clamp-2">{idea.title}</h2>
@@ -91,17 +116,20 @@ function IdeaCard({ idea }: { idea: Idea }) {
   );
 }
 
-// Typ-Sektion
-function TypeSection({ type, ideas }: { type: IdeaType; ideas: Idea[] }) {
-  const config = TYPE_CONFIG[type];
+// Phasen-Sektion
+function PhaseSection({ phase, ideas }: { phase: BpfPhase; ideas: Idea[] }) {
+  const config = PHASE_CONFIG[phase];
   
   return (
     <section className="mb-8">
       <div className="flex items-center gap-2 mb-4">
         <span className={config.color}>{config.icon}</span>
-        <h2 className="text-xl font-semibold">{type}</h2>
+        <h2 className="text-xl font-semibold">{phase}</h2>
         <span className="badge badge-ghost">{ideas.length}</span>
       </div>
+      
+      {/* Phasen-Beschreibung */}
+      <p className="text-base-content/60 text-sm mb-4">{config.description}</p>
       
       {ideas.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -111,7 +139,36 @@ function TypeSection({ type, ideas }: { type: IdeaType; ideas: Idea[] }) {
         </div>
       ) : (
         <div className="text-center py-6 bg-base-200/50 rounded-lg">
-          <p className="text-base-content/50">Keine {type === "Idee" ? "Ideen" : type} gefunden</p>
+          <p className="text-base-content/50">Keine Ideen in dieser Phase</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Sektion für Ideen ohne Phase
+function NoPhaseSection({ ideas }: { ideas: Idea[] }) {
+  return (
+    <section className="mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-base-content/40">
+          <Calendar className="h-5 w-5" />
+        </span>
+        <h2 className="text-xl font-semibold text-base-content/60">Keine Phase</h2>
+        <span className="badge badge-ghost">{ideas.length}</span>
+      </div>
+      
+      <p className="text-base-content/60 text-sm mb-4">Ideen ohne zugewiesene Prozessphase</p>
+      
+      {ideas.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {ideas.map((idea) => (
+            <IdeaCard key={idea.id} idea={idea} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-6 bg-base-200/50 rounded-lg">
+          <p className="text-base-content/50">Keine Ideen ohne Phase</p>
         </div>
       )}
     </section>
@@ -130,19 +187,22 @@ export default function IdeasList({ ideas }: IdeasListProps) {
     setFilteredIdeas(filtered);
   }, []);
 
-  // Gefilterte Ideen nach Typ gruppieren
-  const groupedIdeas: Record<IdeaType, Idea[]> = {
-    Idee: [],
-    Vorhaben: [],
-    Projekt: [],
+  // Gefilterte Ideen nach Phase gruppieren
+  const groupedIdeas: Record<BpfPhase, Idea[]> = {
+    "Initialisierung": [],
+    "Analyse & Bewertung": [],
+    "Planung": [],
+    "Umsetzung": [],
   };
+  
+  const ideasWithoutPhase: Idea[] = [];
 
   for (const idea of filteredIdeas) {
-    const type = idea.type as IdeaType | undefined;
-    if (type && type in groupedIdeas) {
-      groupedIdeas[type].push(idea);
+    const phase = idea.bpfStatus as BpfPhase | undefined;
+    if (phase && phase in groupedIdeas) {
+      groupedIdeas[phase].push(idea);
     } else {
-      groupedIdeas.Idee.push(idea);
+      ideasWithoutPhase.push(idea);
     }
   }
 
@@ -158,13 +218,21 @@ export default function IdeasList({ ideas }: IdeasListProps) {
           <p className="text-base-content/40 text-sm mt-1">Passe deine Filter an oder setze sie zurück</p>
         </div>
       ) : (
-        // Gruppierte Ideen anzeigen
-        IDEA_TYPES.map((type) => {
-          const typeIdeas = groupedIdeas[type];
-          // Nur Sektionen mit Ideen anzeigen
-          if (typeIdeas.length === 0) return null;
-          return <TypeSection key={type} type={type} ideas={typeIdeas} />;
-        })
+        // Gruppierte Ideen nach Phase anzeigen
+        <>
+          {/* Phasen in der richtigen Reihenfolge */}
+          {BPF_PHASES.map((phase) => {
+            const phaseIdeas = groupedIdeas[phase];
+            // Nur Sektionen mit Ideen anzeigen
+            if (phaseIdeas.length === 0) return null;
+            return <PhaseSection key={phase} phase={phase} ideas={phaseIdeas} />;
+          })}
+          
+          {/* Ideen ohne Phase */}
+          {ideasWithoutPhase.length > 0 && (
+            <NoPhaseSection ideas={ideasWithoutPhase} />
+          )}
+        </>
       )}
     </div>
   );
