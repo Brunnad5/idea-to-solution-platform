@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { fetchAllIdeas, isDataverseConfigured } from "@/lib/dataverse";
-import { AlertCircle, Lightbulb } from "lucide-react";
+import { AlertCircle, Edit3, Lightbulb } from "lucide-react";
 import IdeasList from "@/components/IdeasList";
 
 // Komponente: Hinweis wenn Dataverse nicht konfiguriert
@@ -39,6 +39,9 @@ export default async function IdeasPage() {
   // Ideen laden (aus Dataverse oder Mock-Daten)
   const ideas = await fetchAllIdeas();
   const isConfigured = await isDataverseConfigured();
+  
+  // Anzahl Ideen zur Überarbeitung zählen
+  const revisionCount = ideas.filter((idea) => idea.status === "in Überarbeitung").length;
 
   return (
     <div>
@@ -50,9 +53,20 @@ export default async function IdeasPage() {
             <h1 className="text-2xl font-bold">Ideen-Pool</h1>
           </div>
         </div>
-        <Link href="/ideas/new" className="btn btn-primary btn-sm">
-          Neue Idee
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/ideas/revision" className="btn btn-warning btn-sm btn-outline gap-1 relative">
+            <Edit3 className="h-4 w-4" />
+            Überarbeitung
+            {revisionCount > 0 && (
+              <span className="badge badge-error badge-xs absolute -top-2 -right-2 min-w-[1.25rem] h-5">
+                {revisionCount}
+              </span>
+            )}
+          </Link>
+          <Link href="/ideas/new" className="btn btn-primary btn-sm">
+            Neue Idee
+          </Link>
+        </div>
       </div>
 
       {/* Hinweis wenn Demo-Modus */}

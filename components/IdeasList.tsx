@@ -10,9 +10,24 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Calendar, FolderKanban, Lightbulb, Rocket, User } from "lucide-react";
-import { Idea } from "@/lib/validators";
+import { Idea, IdeaStatus, ideaStatusValues } from "@/lib/validators";
 import { stripHtmlTags } from "@/lib/htmlUtils";
 import IdeaFilters from "./IdeaFilters";
+
+// Lifecycle-Status Labels für die Anzeige
+const LIFECYCLE_STATUS_LABELS: Record<IdeaStatus, string> = {
+  "eingereicht": "Eingereicht",
+  "in Qualitätsprüfung": "In Qualitätsprüfung",
+  "in Überarbeitung": "Zur Überarbeitung",
+  "in Detailanalyse": "In Detailanalyse",
+  "ITOT-Board vorgestellt": "ITOT-Board vorgestellt",
+  "Projektportfolio aufgenommen": "In Projektportfolio",
+  "Quartalsplanung aufgenommen": "In Quartalsplanung",
+  "Wochenplanung aufgenommen": "In Wochenplanung",
+  "in Umsetzung": "In Umsetzung",
+  "abgeschlossen": "Abgeschlossen",
+  "abgelehnt": "Abgelehnt",
+};
 
 // Die vier BPF-Phasen in der gewünschten Reihenfolge
 const BPF_PHASES = ["Initialisierung", "Analyse & Bewertung", "Planung", "Umsetzung"] as const;
@@ -117,13 +132,47 @@ function IdeaCard({ idea }: { idea: Idea }) {
   );
 }
 
-// Phasen-Sektion
+// Lifecycle-Status Untergruppe
+function LifecycleStatusGroup({ status, ideas }: { status: IdeaStatus; ideas: Idea[] }) {
+  if (ideas.length === 0) return null;
+  
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <h3 className="text-sm font-medium text-base-content/70">
+          {LIFECYCLE_STATUS_LABELS[status]}
+        </h3>
+        <span className="badge badge-sm badge-ghost">{ideas.length}</span>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {ideas.map((idea) => (
+          <IdeaCard key={idea.id} idea={idea} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Phasen-Sektion mit Lifecycle-Status-Gruppierung
 function PhaseSection({ phase, ideas }: { phase: BpfPhase; ideas: Idea[] }) {
   const config = PHASE_CONFIG[phase];
   
+  // Ideen nach Lifecycle-Status gruppieren (nur Status mit Ideen)
+  const ideasByStatus: Partial<Record<IdeaStatus, Idea[]>> = {};
+  for (const idea of ideas) {
+    const status = idea.status;
+    if (!ideasByStatus[status]) {
+      ideasByStatus[status] = [];
+    }
+    ideasByStatus[status]!.push(idea);
+  }
+  
+  // Sortierte Status-Liste (in der Reihenfolge wie in ideaStatusValues definiert)
+  const statusesWithIdeas = ideaStatusValues.filter((status) => ideasByStatus[status]?.length);
+  
   return (
-    <section className="mb-8">
-      <div className="flex items-center gap-2 mb-4">
+    <section className="mb-10">
+      <div className="flex items-center gap-2 mb-2">
         <span className={config.color}>{config.icon}</span>
         <h2 className="text-xl font-semibold">{phase}</h2>
         <span className="badge badge-ghost">{ideas.length}</span>
@@ -133,9 +182,13 @@ function PhaseSection({ phase, ideas }: { phase: BpfPhase; ideas: Idea[] }) {
       <p className="text-base-content/60 text-sm mb-4">{config.description}</p>
       
       {ideas.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {ideas.map((idea) => (
-            <IdeaCard key={idea.id} idea={idea} />
+        <div className="pl-2 border-l-2 border-base-300">
+          {statusesWithIdeas.map((status) => (
+            <LifecycleStatusGroup
+              key={status}
+              status={status}
+              ideas={ideasByStatus[status]!}
+            />
           ))}
         </div>
       ) : (
