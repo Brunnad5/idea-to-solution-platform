@@ -11,6 +11,7 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Calendar, FolderKanban, Lightbulb, Rocket, User } from "lucide-react";
 import { Idea } from "@/lib/validators";
+import { stripHtmlTags } from "@/lib/htmlUtils";
 import IdeaFilters from "./IdeaFilters";
 
 // Die vier BPF-Phasen in der gewünschten Reihenfolge
@@ -99,7 +100,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
         {/* Titel */}
         <h2 className="card-title text-base sm:text-lg line-clamp-2">{idea.title}</h2>
         {/* Beschreibung */}
-        <p className="text-base-content/70 text-sm line-clamp-2">{idea.description}</p>
+        <p className="text-base-content/70 text-sm line-clamp-2">{stripHtmlTags(idea.description)}</p>
         {/* Meta-Infos */}
         <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-base-content/60">
           <span className="flex items-center gap-1">
