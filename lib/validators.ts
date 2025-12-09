@@ -47,14 +47,15 @@ export const editIdeaSchema = z.object({
  */
 export const ideaStatusValues = [
   "eingereicht",
-  "initialgeprüft",
+  "in Qualitätsprüfung",
   "in Überarbeitung",
   "in Detailanalyse",
-  "zur Genehmigung",
-  "genehmigt",
-  "in Planung",
+  "ITOT-Board vorgestellt",
+  "Projektportfolio aufgenommen",
+  "Quartalsplanung aufgenommen",
+  "Wochenplanung aufgenommen",
   "in Umsetzung",
-  "umgesetzt",
+  "abgeschlossen",
   "abgelehnt",
 ] as const;
 
@@ -89,7 +90,26 @@ export const ideaSchema = z.object({
   initialReviewReason: z.string().optional(), // Begründung der Initialbewertung
   complexity: z.string().optional(), // Komplexität
   criticality: z.string().optional(), // Kritikalität
-  initialReviewDate: z.string().optional(), // Datum der Initialprüfung
+  initialReviewDate: z.string().optional(), // Datum der Initialprüfung (wenn vorhanden)
+  
+  // Detailanalyse (ab Status "in Detailanalyse")
+  detailAnalysisResult: z.string().optional(), // Ergebnis der Detailanalyse
+  detailAnalysisBenefit: z.string().optional(), // Nutzen der Detailanalyse
+  detailAnalysisEffort: z.number().optional(), // Aufwandschätzung in Personentagen
+  priority: z.string().optional(), // Priorität
+  
+  // ITOT-Board (ab Status "ITOT-Board vorgestellt")
+  itotBoardReason: z.string().optional(), // ITOT-Board Begründung
+  itotBoardMeeting: z.string().optional(), // ITOT-Board Sitzung (Lookup-Name)
+  itotBoardMeetingId: z.string().optional(), // ITOT-Board Sitzung (Lookup-GUID)
+  
+  // Planung (ab Status "in Planung")
+  plannedStart: z.string().optional(), // Geplanter Start
+  plannedEnd: z.string().optional(), // Geplantes Ende
+  
+  // Abschluss-Datum
+  completedOn: z.string().optional(), // Abgeschlossen am
+  rejectedOn: z.string().optional(), // Abgelehnt am
 });
 
 // ============================================

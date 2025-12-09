@@ -71,6 +71,21 @@ const FIELD_MAP = {
   complexity: "cr6df_komplexitaet",
   criticality: "cr6df_kritikalitaet",
   initialReviewDate: "cr6df_initialgeprueft_am",
+  // Detailanalyse
+  detailAnalysisResult: "cr6df_detailanalyse_ergebnis",
+  detailAnalysisBenefit: "cr6df_detailanalyse_nutzen",
+  detailAnalysisEffort: "cr6df_detailanalyse_personentage",
+  priority: "cr6df_prioritat",
+  // ITOT-Board
+  itotBoardReason: "cr6df_itotboard_begruendung",
+  itotBoardMeeting: "_cr6df_itotboardsitzung_value",
+  itotBoardMeetingName: "_cr6df_itotboardsitzung_value@OData.Community.Display.V1.FormattedValue",
+  // Planung
+  plannedStart: "cr6df_planung_geplanterstart",
+  plannedEnd: "cr6df_planung_geplantesende",
+  // Abschluss
+  completedOn: "cr6df_abgeschlossen_am",
+  rejectedOn: "cr6df_abgelehnt_am",
 } as const;
 
 /**
@@ -171,6 +186,27 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
   const criticality = record[`${FIELD_MAP.criticality}@OData.Community.Display.V1.FormattedValue`] as string | undefined
     || record[FIELD_MAP.criticality] as string | undefined;
   const initialReviewDate = record[FIELD_MAP.initialReviewDate] as string | undefined;
+  
+  // Detailanalyse-Felder
+  const detailAnalysisResult = record[FIELD_MAP.detailAnalysisResult] as string | undefined;
+  const detailAnalysisBenefit = record[FIELD_MAP.detailAnalysisBenefit] as string | undefined;
+  const detailAnalysisEffortRaw = record[FIELD_MAP.detailAnalysisEffort];
+  const detailAnalysisEffort = typeof detailAnalysisEffortRaw === 'number' ? detailAnalysisEffortRaw : undefined;
+  const priority = record[`${FIELD_MAP.priority}@OData.Community.Display.V1.FormattedValue`] as string | undefined
+    || record[FIELD_MAP.priority] as string | undefined;
+  
+  // ITOT-Board-Felder
+  const itotBoardReason = record[FIELD_MAP.itotBoardReason] as string | undefined;
+  const itotBoardMeeting = record[FIELD_MAP.itotBoardMeetingName] as string | undefined;
+  const itotBoardMeetingId = record[FIELD_MAP.itotBoardMeeting] as string | undefined;
+  
+  // Planungs-Felder
+  const plannedStart = record[FIELD_MAP.plannedStart] as string | undefined;
+  const plannedEnd = record[FIELD_MAP.plannedEnd] as string | undefined;
+  
+  // Abschluss-Felder
+  const completedOn = record[FIELD_MAP.completedOn] as string | undefined;
+  const rejectedOn = record[FIELD_MAP.rejectedOn] as string | undefined;
 
   return {
     id: record[FIELD_MAP.id] as string,
@@ -190,6 +226,21 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
     complexity,
     criticality,
     initialReviewDate,
+    // Detailanalyse
+    detailAnalysisResult,
+    detailAnalysisBenefit,
+    detailAnalysisEffort,
+    priority,
+    // ITOT-Board
+    itotBoardReason,
+    itotBoardMeeting,
+    itotBoardMeetingId,
+    // Planung
+    plannedStart,
+    plannedEnd,
+    // Abschluss
+    completedOn,
+    rejectedOn,
   };
 }
 
@@ -199,15 +250,16 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
  */
 const STATUS_MAP: Record<number, IdeaStatus> = {
   562520000: "eingereicht",
-  562520001: "initialgeprüft",
+  562520001: "in Qualitätsprüfung",
   562520002: "in Überarbeitung",
-  562520009: "in Detailanalyse",
-  562520003: "zur Genehmigung",
-  562520004: "genehmigt",
-  562520005: "in Planung",
-  562520006: "in Umsetzung",
-  562520007: "umgesetzt",
-  562520008: "abgelehnt",
+  562520003: "in Detailanalyse",
+  562520005: "ITOT-Board vorgestellt",
+  562520006: "Projektportfolio aufgenommen",
+  562520007: "Quartalsplanung aufgenommen",
+  562520008: "Wochenplanung aufgenommen",
+  562520010: "in Umsetzung",
+  562520011: "abgeschlossen",
+  562520004: "abgelehnt",
 };
 
 /** Wandelt den numerischen Status-Wert in einen lesbaren String um */
@@ -225,14 +277,15 @@ function mapStatusValue(value: unknown): IdeaStatus {
 function isValidStatus(value: unknown): value is IdeaStatus {
   const validStatuses: IdeaStatus[] = [
     "eingereicht",
-    "initialgeprüft",
+    "in Qualitätsprüfung",
     "in Überarbeitung",
     "in Detailanalyse",
-    "zur Genehmigung",
-    "genehmigt",
-    "in Planung",
+    "ITOT-Board vorgestellt",
+    "Projektportfolio aufgenommen",
+    "Quartalsplanung aufgenommen",
+    "Wochenplanung aufgenommen",
     "in Umsetzung",
-    "umgesetzt",
+    "abgeschlossen",
     "abgelehnt",
   ];
   return typeof value === "string" && validStatuses.includes(value as IdeaStatus);
@@ -508,7 +561,7 @@ function getMockIdeas(): Idea[] {
       submittedBy: "Max Muster",
       submittedById: "11111111-1111-1111-1111-111111111111", // Mock GUID
       type: "Idee",
-      status: "initialgeprüft",
+      status: "in Qualitätsprüfung",
       createdOn: "2024-11-15T09:30:00Z",
     },
     {
@@ -519,7 +572,7 @@ function getMockIdeas(): Idea[] {
       submittedBy: "Anna Beispiel",
       submittedById: "22222222-2222-2222-2222-222222222222", // Mock GUID
       type: "Vorhaben",
-      status: "genehmigt",
+      status: "Projektportfolio aufgenommen",
       createdOn: "2024-11-10T14:15:00Z",
     },
     {

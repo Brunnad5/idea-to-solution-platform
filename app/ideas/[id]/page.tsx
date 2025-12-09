@@ -14,16 +14,22 @@ import SubscribeButton from "@/components/SubscribeButton";
 import { 
   ArrowLeft, 
   Calendar, 
+  CalendarCheck,
   Check,
   ChevronDown,
   ClipboardCheck,
   Clock, 
+  FileSearch,
   Gauge,
   Lightbulb, 
   MessageSquare,
   Shield,
+  Star,
   Tag, 
-  User
+  Target,
+  TrendingUp,
+  User,
+  Users
 } from "lucide-react";
 import { Idea } from "@/lib/validators";
 
@@ -48,18 +54,19 @@ const BPF_STAGES = [
   { name: "Umsetzung", order: 3 },
 ];
 
-// Lifecycle-Status Mapping (für Detail-Anzeige)
+// Lifecycle-Status Mapping (für Detail-Anzeige, basierend auf Screenshots)
 const LIFECYCLE_STATUS_MAP: Record<string, { label: string; editable: boolean }> = {
   "eingereicht": { label: "Eingereicht", editable: true },
-  "initialgeprüft": { label: "Idee in Qualitätsprüfung", editable: false },
+  "in Qualitätsprüfung": { label: "Idee in Qualitätsprüfung", editable: false },
   "in Überarbeitung": { label: "Idee zur Überarbeitung an Ideengebenden", editable: true },
   "in Detailanalyse": { label: "Idee in Detailanalyse", editable: false },
-  "zur Genehmigung": { label: "Genehmigt", editable: false },
-  "genehmigt": { label: "Genehmigt", editable: false },
-  "abgelehnt": { label: "Abgelehnt", editable: false },
-  "in Planung": { label: "Idee wird ITOT-Board vorgestellt", editable: false },
+  "ITOT-Board vorgestellt": { label: "Idee wird ITOT-Board vorgestellt", editable: false },
+  "Projektportfolio aufgenommen": { label: "Idee in Projektportfolio aufgenommen", editable: false },
+  "Quartalsplanung aufgenommen": { label: "Idee in Quartalsplanung aufgenommen", editable: false },
+  "Wochenplanung aufgenommen": { label: "Idee in Wochenplanung aufgenommen", editable: false },
   "in Umsetzung": { label: "In Umsetzung", editable: false },
-  "umgesetzt": { label: "Abgeschlossen", editable: false },
+  "abgeschlossen": { label: "Abgeschlossen", editable: false },
+  "abgelehnt": { label: "Abgelehnt", editable: false },
 };
 
 // Timeline-Komponente mit BPF-Daten
@@ -169,17 +176,51 @@ function ProcessTimeline({ bpfStatus, lifecycleStatus }: { bpfStatus: BpfStatus 
   );
 }
 
-// Status-Werte, die anzeigen, dass die Initialprüfung abgeschlossen ist
+// Status-Werte für jeden Abschnitt (basierend auf Screenshots)
+// Initialprüfung: Ab Status "in Qualitätsprüfung" (562520001)
 const INITIAL_REVIEW_COMPLETED_STATUSES: IdeaStatus[] = [
-  "initialgeprüft",
+  "in Qualitätsprüfung",
   "in Überarbeitung",
   "in Detailanalyse",
-  "zur Genehmigung",
-  "genehmigt",
-  "in Planung",
+  "ITOT-Board vorgestellt",
+  "Projektportfolio aufgenommen",
+  "Quartalsplanung aufgenommen",
+  "Wochenplanung aufgenommen",
   "in Umsetzung",
-  "umgesetzt",
+  "abgeschlossen",
   "abgelehnt",
+];
+
+// Detailanalyse: Ab Status "in Detailanalyse" (562520003)
+const DETAIL_ANALYSIS_STATUSES: IdeaStatus[] = [
+  "in Detailanalyse",
+  "ITOT-Board vorgestellt",
+  "Projektportfolio aufgenommen",
+  "Quartalsplanung aufgenommen",
+  "Wochenplanung aufgenommen",
+  "in Umsetzung",
+  "abgeschlossen",
+  "abgelehnt",
+];
+
+// ITOT-Board: Ab Status "ITOT-Board vorgestellt" (562520005)
+const ITOT_BOARD_STATUSES: IdeaStatus[] = [
+  "ITOT-Board vorgestellt",
+  "Projektportfolio aufgenommen",
+  "Quartalsplanung aufgenommen",
+  "Wochenplanung aufgenommen",
+  "in Umsetzung",
+  "abgeschlossen",
+  "abgelehnt",
+];
+
+// Planung: Ab Status "Projektportfolio aufgenommen" (562520006)
+const PLANNING_STATUSES: IdeaStatus[] = [
+  "Projektportfolio aufgenommen",
+  "Quartalsplanung aufgenommen",
+  "Wochenplanung aufgenommen",
+  "in Umsetzung",
+  "abgeschlossen",
 ];
 
 // Einklappbarer Abschnitt - Client Component nicht nötig, da wir details/summary verwenden
@@ -233,32 +274,6 @@ function InitialReviewSection({ idea }: { idea: Idea }) {
       defaultOpen={true}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-        {/* Komplexität */}
-        {idea.complexity && (
-          <div className="flex items-center gap-3">
-            <div className="bg-base-100 p-2 rounded-lg">
-              <Gauge className="h-5 w-5 text-base-content/60" />
-            </div>
-            <div>
-              <p className="text-xs text-base-content/60">Komplexität</p>
-              <p className="font-medium">{idea.complexity}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Kritikalität */}
-        {idea.criticality && (
-          <div className="flex items-center gap-3">
-            <div className="bg-base-100 p-2 rounded-lg">
-              <Shield className="h-5 w-5 text-base-content/60" />
-            </div>
-            <div>
-              <p className="text-xs text-base-content/60">Kritikalität</p>
-              <p className="font-medium">{idea.criticality}</p>
-            </div>
-          </div>
-        )}
-
         {/* Geprüft am */}
         {idea.initialReviewDate && (
           <div className="flex items-center gap-3">
@@ -287,9 +302,227 @@ function InitialReviewSection({ idea }: { idea: Idea }) {
       )}
 
       {/* Fallback wenn keine Daten */}
-      {!idea.complexity && !idea.criticality && !idea.initialReviewDate && !idea.initialReviewReason && (
+      {!idea.initialReviewDate && !idea.initialReviewReason && (
         <p className="text-sm text-base-content/50 italic pt-2">
           Keine Details zur Initialprüfung verfügbar.
+        </p>
+      )}
+    </CollapsibleSection>
+  );
+}
+
+// Detailanalyse-Abschnitt
+function DetailAnalysisSection({ idea }: { idea: Idea }) {
+  const hasDetailAnalysis = DETAIL_ANALYSIS_STATUSES.includes(idea.status);
+  
+  if (!hasDetailAnalysis) {
+    return null;
+  }
+
+  return (
+    <CollapsibleSection 
+      title="Detailanalyse" 
+      icon={<FileSearch className="h-5 w-5 text-warning" />}
+      defaultOpen={true}
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+        {/* Komplexität (auch hier nochmal für Übersicht) */}
+        {idea.complexity && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <Gauge className="h-5 w-5 text-base-content/60" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Komplexität</p>
+              <p className="font-medium">{idea.complexity}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Kritikalität */}
+        {idea.criticality && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <Shield className="h-5 w-5 text-base-content/60" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Kritikalität</p>
+              <p className="font-medium">{idea.criticality}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Aufwandschätzung (Personentage) */}
+        {idea.detailAnalysisEffort !== undefined && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <Clock className="h-5 w-5 text-base-content/60" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Aufwandschätzung</p>
+              <p className="font-medium">{idea.detailAnalysisEffort} Personentage</p>
+            </div>
+          </div>
+        )}
+
+        {/* Priorität */}
+        {idea.priority && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <Star className="h-5 w-5 text-base-content/60" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Priorität</p>
+              <p className="font-medium">{idea.priority}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Nutzen (volle Breite) */}
+      {idea.detailAnalysisBenefit && (
+        <div className="mt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="h-4 w-4 text-base-content/60" />
+            <p className="text-xs text-base-content/60">Nutzen</p>
+          </div>
+          <p className="text-sm bg-base-100 p-3 rounded-lg whitespace-pre-wrap">
+            {idea.detailAnalysisBenefit}
+          </p>
+        </div>
+      )}
+
+      {/* Ergebnis (volle Breite) */}
+      {idea.detailAnalysisResult && (
+        <div className="mt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="h-4 w-4 text-base-content/60" />
+            <p className="text-xs text-base-content/60">Ergebnis der Detailanalyse</p>
+          </div>
+          <p className="text-sm bg-base-100 p-3 rounded-lg whitespace-pre-wrap">
+            {idea.detailAnalysisResult}
+          </p>
+        </div>
+      )}
+
+      {/* Fallback */}
+      {!idea.complexity && !idea.criticality && !idea.detailAnalysisEffort && !idea.detailAnalysisResult && !idea.detailAnalysisBenefit && !idea.priority && (
+        <p className="text-sm text-base-content/50 italic pt-2">
+          Keine Details zur Detailanalyse verfügbar.
+        </p>
+      )}
+    </CollapsibleSection>
+  );
+}
+
+// ITOT-Board-Abschnitt
+function ItotBoardSection({ idea }: { idea: Idea }) {
+  const hasItotBoard = ITOT_BOARD_STATUSES.includes(idea.status);
+  
+  if (!hasItotBoard) {
+    return null;
+  }
+
+  return (
+    <CollapsibleSection 
+      title="ITOT-Board Sitzung" 
+      icon={<Users className="h-5 w-5 text-primary" />}
+      defaultOpen={true}
+    >
+      <div className="grid grid-cols-1 gap-4 pt-2">
+        {/* ITOT-Board Begründung */}
+        {idea.itotBoardReason && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare className="h-4 w-4 text-base-content/60" />
+              <p className="text-xs text-base-content/60">ITOT-Board Begründung</p>
+            </div>
+            <p className="text-sm bg-base-100 p-3 rounded-lg whitespace-pre-wrap">
+              {idea.itotBoardReason}
+            </p>
+          </div>
+        )}
+
+        {/* ITOT-Board Sitzung (Lookup) */}
+        {idea.itotBoardMeeting && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <CalendarCheck className="h-5 w-5 text-base-content/60" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">ITOT-Board Sitzung</p>
+              <p className="font-medium">{idea.itotBoardMeeting}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Fallback */}
+      {!idea.itotBoardReason && !idea.itotBoardMeeting && (
+        <p className="text-sm text-base-content/50 italic pt-2">
+          Keine Details zur ITOT-Board Sitzung verfügbar.
+        </p>
+      )}
+    </CollapsibleSection>
+  );
+}
+
+// Planungs-Abschnitt
+function PlanningSection({ idea }: { idea: Idea }) {
+  const hasPlanning = PLANNING_STATUSES.includes(idea.status);
+  
+  if (!hasPlanning) {
+    return null;
+  }
+
+  // Hilfsfunktion für Datumsformatierung (nur Datum)
+  const formatPlanDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("de-CH", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  return (
+    <CollapsibleSection 
+      title="Planung" 
+      icon={<CalendarCheck className="h-5 w-5 text-success" />}
+      defaultOpen={true}
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+        {/* Geplanter Start */}
+        {idea.plannedStart && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <Calendar className="h-5 w-5 text-success" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Geplanter Start</p>
+              <p className="font-medium">{formatPlanDate(idea.plannedStart)}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Geplantes Ende */}
+        {idea.plannedEnd && (
+          <div className="flex items-center gap-3">
+            <div className="bg-base-100 p-2 rounded-lg">
+              <Calendar className="h-5 w-5 text-error" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Geplantes Ende</p>
+              <p className="font-medium">{formatPlanDate(idea.plannedEnd)}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Fallback */}
+      {!idea.plannedStart && !idea.plannedEnd && (
+        <p className="text-sm text-base-content/50 italic pt-2">
+          Keine Planungsdaten verfügbar.
         </p>
       )}
     </CollapsibleSection>
@@ -350,10 +583,19 @@ export default async function IdeaDetailPage({ params }: PageProps) {
           {/* Timeline */}
           <ProcessTimeline bpfStatus={bpfStatus} lifecycleStatus={idea.status} />
 
-          {/* Zusätzliche Abschnitte (einklappbar) */}
+          {/* Zusätzliche Abschnitte (einklappbar, basierend auf Lifecycle-Status) */}
           <div className="mt-6 space-y-4">
-            {/* Initialprüfung */}
+            {/* Initialprüfung (ab Status "initialgeprüft") */}
             <InitialReviewSection idea={idea} />
+            
+            {/* Detailanalyse (ab Status "in Detailanalyse") */}
+            <DetailAnalysisSection idea={idea} />
+            
+            {/* ITOT-Board Sitzung (ab Status "zur Genehmigung") */}
+            <ItotBoardSection idea={idea} />
+            
+            {/* Planung (ab Status "in Planung") */}
+            <PlanningSection idea={idea} />
           </div>
 
           {/* Divider */}
