@@ -11,6 +11,7 @@ import { fetchIdeaById, fetchBpfStatus, BpfStatus } from "@/lib/dataverse";
 import { IdeaStatus } from "@/lib/validators";
 import EditButton from "@/components/EditButton";
 import SubscribeButton from "@/components/SubscribeButton";
+import SanitizedHtml from "@/components/SanitizedHtml";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -295,9 +296,9 @@ function InitialReviewSection({ idea }: { idea: Idea }) {
             <MessageSquare className="h-4 w-4 text-base-content/60" />
             <p className="text-xs text-base-content/60">Begründung</p>
           </div>
-          <p className="text-sm bg-base-100 p-3 rounded-lg whitespace-pre-wrap">
-            {idea.initialReviewReason}
-          </p>
+          <div className="text-sm bg-base-100 p-3 rounded-lg">
+            <SanitizedHtml html={idea.initialReviewReason} />
+          </div>
         </div>
       )}
 
@@ -386,9 +387,9 @@ function DetailAnalysisSection({ idea }: { idea: Idea }) {
             <TrendingUp className="h-4 w-4 text-base-content/60" />
             <p className="text-xs text-base-content/60">Nutzen</p>
           </div>
-          <p className="text-sm bg-base-100 p-3 rounded-lg whitespace-pre-wrap">
-            {idea.detailAnalysisBenefit}
-          </p>
+          <div className="text-sm bg-base-100 p-3 rounded-lg">
+            <SanitizedHtml html={idea.detailAnalysisBenefit} />
+          </div>
         </div>
       )}
 
@@ -399,9 +400,9 @@ function DetailAnalysisSection({ idea }: { idea: Idea }) {
             <Target className="h-4 w-4 text-base-content/60" />
             <p className="text-xs text-base-content/60">Ergebnis der Detailanalyse</p>
           </div>
-          <p className="text-sm bg-base-100 p-3 rounded-lg whitespace-pre-wrap">
-            {idea.detailAnalysisResult}
-          </p>
+          <div className="text-sm bg-base-100 p-3 rounded-lg">
+            <SanitizedHtml html={idea.detailAnalysisResult} />
+          </div>
         </div>
       )}
 
@@ -437,9 +438,9 @@ function ItotBoardSection({ idea }: { idea: Idea }) {
               <MessageSquare className="h-4 w-4 text-base-content/60" />
               <p className="text-xs text-base-content/60">ITOT-Board Begründung</p>
             </div>
-            <p className="text-sm bg-base-100 p-3 rounded-lg whitespace-pre-wrap">
-              {idea.itotBoardReason}
-            </p>
+            <div className="text-sm bg-base-100 p-3 rounded-lg">
+              <SanitizedHtml html={idea.itotBoardReason} />
+            </div>
           </div>
         )}
 
@@ -575,9 +576,9 @@ export default async function IdeaDetailPage({ params }: PageProps) {
             <h2 className="text-sm font-semibold text-base-content/60 uppercase tracking-wide mb-2">
               Beschreibung
             </h2>
-            <p className="text-base-content whitespace-pre-wrap">
-              {idea.description}
-            </p>
+            <div className="text-base-content">
+              <SanitizedHtml html={idea.description} />
+            </div>
           </div>
 
           {/* Timeline */}
