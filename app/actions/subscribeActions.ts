@@ -8,14 +8,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { findEmployeeByEmail } from "@/lib/dataverse";
 import { getCurrentUserAsync } from "@/lib/auth";
 
 const DATAVERSE_URL = process.env.DATAVERSE_URL || "";
 const TABLE_NAME = "cr6df_sgsw_digitalisierungsvorhabens";
+const EMPLOYEE_TABLE_NAME = "cr6df_sgsw_mitarbeitendes";
 
 /**
  * Holt den Access Token (aus Cookie oder ENV)
+ * Priorisiert ENV für Server Actions (stabiler)
  */
 async function getAccessToken(): Promise<string | null> {
   try {
@@ -32,6 +33,63 @@ async function getAccessToken(): Promise<string | null> {
   } catch (error) {
     console.error("[TOKEN] Fehler beim Token-Zugriff:", error);
     return process.env.DATAVERSE_ACCESS_TOKEN || null;
+  }
+}
+
+/**
+ * Sucht einen Mitarbeiter anhand der E-Mail-Adresse.
+ * Lokale Version für Server Actions mit eigenem Token-Handling.
+ * 
+ * @param email - Die E-Mail-Adresse des Mitarbeiters
+ * @param token - Der Access Token für Dataverse
+ * @returns Die GUID des Mitarbeiters oder null
+ */
+async function findEmployeeByEmailLocal(email: string, token: string): Promise<string | null> {
+  console.log(`[Subscribe] Suche Mitarbeiter für E-Mail: ${email}`);
+
+  try {
+    // OData-Filter für E-Mail-Suche
+    // ACHTUNG: In Dataverse ist die Spalte vertauscht!
+    // cr6df_vorname enthält die E-Mail (DisplayName: "email")
+    const filter = `$filter=cr6df_vorname eq '${email}'`;
+    const select = "$select=cr6df_sgsw_mitarbeitendeid,cr6df_vorname,cr6df_nachname";
+    const url = `${DATAVERSE_URL}/api/data/v9.2/${EMPLOYEE_TABLE_NAME}?${filter}&${select}`;
+
+    console.log(`[Subscribe] Mitarbeiter-API-URL: ${url}`);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "OData-MaxVersion": "4.0",
+        "OData-Version": "4.0",
+        "Accept": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      console.error(`[Subscribe] Mitarbeitersuche fehlgeschlagen: ${response.status}`, errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`[Subscribe] Mitarbeiter-Antwort:`, JSON.stringify(data, null, 2));
+    
+    if (data.value && data.value.length > 0) {
+      const employeeId = data.value[0].cr6df_sgsw_mitarbeitendeid;
+      const employeeName = data.value[0].cr6df_nachname;
+      console.log(`[Subscribe] Mitarbeiter gefunden: ${employeeName} (${employeeId})`);
+      return employeeId;
+    }
+
+    console.warn(`[Subscribe] Kein Mitarbeiter gefunden für E-Mail: ${email}`);
+    return null;
+  } catch (error) {
+    console.error("[Subscribe] Fehler bei Mitarbeitersuche:", error);
+    return null;
   }
 }
 
@@ -119,12 +177,18 @@ export async function subscribeToIdea(
   ideaId: string,
   ideengeberId?: string
 ): Promise<{ success: boolean; error?: string; isIdeengeber?: boolean }> {
+  // Token zuerst holen - wird für alle API-Calls benötigt
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, error: "Kein Access Token verfügbar. Bitte verbinde dich mit Dataverse." };
+  }
+  
   // Aktuellen User holen (aus Token oder ENV)
   const currentUser = await getCurrentUserAsync();
   console.log(`[Subscribe] User: ${currentUser.email} (Source: ${currentUser.source})`);
   
-  // Mitarbeiter anhand E-Mail suchen
-  const mitarbeiterId = await findEmployeeByEmail(currentUser.email);
+  // Mitarbeiter anhand E-Mail suchen (lokale Funktion mit eigenem Token)
+  const mitarbeiterId = await findEmployeeByEmailLocal(currentUser.email, token);
   
   if (!mitarbeiterId) {
     return { 
