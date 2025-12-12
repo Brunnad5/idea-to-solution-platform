@@ -39,8 +39,12 @@ export async function submitIdea(data: CreateIdeaInput): Promise<{
     // Aktuellen User holen (Mock-User im Prototyp)
     const currentUser = getCurrentUser();
 
-    // Idee in Dataverse erstellen
-    const newIdea = await createIdea(validationResult.data, currentUser.name);
+    // Idee in Dataverse erstellen (mit E-Mail für Ideengeber-Zuordnung)
+    const newIdea = await createIdea(
+      validationResult.data, 
+      currentUser.name,
+      currentUser.email // E-Mail für automatische Ideengeber-Zuordnung
+    );
 
     // Erfolg zurückgeben
     return { 

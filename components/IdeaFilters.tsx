@@ -50,14 +50,14 @@ export default function IdeaFilters({ ideas, onFilteredIdeasChange }: IdeaFilter
   const filteredIdeas = useMemo(() => {
     let filtered = [...ideas];
 
-    // Textsuche
+    // Textsuche (mit Null-Checks für sichere Filterung)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (idea) =>
-          idea.title.toLowerCase().includes(query) ||
-          idea.description.toLowerCase().includes(query) ||
-          idea.submittedBy.toLowerCase().includes(query)
+          (idea.title?.toLowerCase() ?? "").includes(query) ||
+          (idea.description?.toLowerCase() ?? "").includes(query) ||
+          (idea.submittedBy?.toLowerCase() ?? "").includes(query)
       );
     }
 

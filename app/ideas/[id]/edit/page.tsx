@@ -63,6 +63,7 @@ export default async function EditIdeaPage({ params }: PageProps) {
             ideaId={id}
             currentTitle={idea.title}
             currentDescription={idea.description}
+            currentStatus={idea.status}
           />
         </div>
       </div>

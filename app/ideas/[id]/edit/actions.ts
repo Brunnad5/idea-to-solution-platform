@@ -12,13 +12,16 @@ import { editIdeaSchema, EditIdeaInput } from "@/lib/validators";
 
 /**
  * Aktualisiert die Beschreibung einer Idee.
+ * Bei Status "in Überarbeitung" wird automatisch auf "eingereicht" zurückgesetzt.
  * 
  * @param id - Die GUID der Idee
  * @param data - Die neuen Formulardaten (nur description)
+ * @param currentStatus - Der aktuelle Lifecycle-Status (optional, für Status-Reset)
  */
 export async function updateIdea(
   id: string,
-  data: EditIdeaInput
+  data: EditIdeaInput,
+  currentStatus?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Daten validieren mit Zod
@@ -31,8 +34,12 @@ export async function updateIdea(
       return { success: false, error: errors };
     }
 
-    // In Dataverse aktualisieren
-    await updateIdeaDescription(id, validationResult.data.description);
+    // In Dataverse aktualisieren (mit Status-Reset bei "in Überarbeitung")
+    await updateIdeaDescription(
+      id, 
+      validationResult.data.description,
+      currentStatus
+    );
 
     return { success: true };
   } catch (error) {

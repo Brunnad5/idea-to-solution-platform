@@ -51,6 +51,12 @@ const BPF_TABLE_NAME = "cr6df_ideatosolutions";
  * Mapping zwischen unseren Feldnamen und den Dataverse-Feldnamen.
  * Dataverse verwendet Präfixe wie "cr6df_" für benutzerdefinierte Felder.
  */
+/**
+ * EntitySetName der Mitarbeiter-Tabelle.
+ * Wird für die Zuordnung des Ideengebers verwendet.
+ */
+const EMPLOYEE_TABLE_NAME = "cr6df_sgsw_mitarbeitendes";
+
 const FIELD_MAP = {
   // Unsere Namen -> Dataverse Namen
   id: "cr6df_sgsw_digitalisierungsvorhabenid", // Primary Key (GUID)
@@ -58,6 +64,8 @@ const FIELD_MAP = {
   description: "cr6df_beschreibung",
   submittedBy: "_createdby_value", // Lookup-Feld, gibt GUID zurück
   submittedByName: "_createdby_value@OData.Community.Display.V1.FormattedValue", // Anzeigename
+  ideengeberId: "_cr6df_ideengeber_value", // Lookup zu Mitarbeiter
+  ideengeberName: "_cr6df_ideengeber_value@OData.Community.Display.V1.FormattedValue",
   type: "cr6df_typ", // OptionSet (Choice) mit numerischen Werten
   status: "cr6df_lifecyclestatus",
   responsiblePerson: "_cr6df_verantwortlicher_value", // Lookup-Feld
@@ -428,14 +436,61 @@ export async function fetchIdeaById(id: string): Promise<Idea | null> {
 }
 
 /**
+ * Sucht einen Mitarbeiter anhand der E-Mail-Adresse.
+ * Wird verwendet, um den Ideengeber automatisch zu setzen.
+ * 
+ * @param email - Die E-Mail-Adresse des Mitarbeiters
+ * @returns Die GUID des Mitarbeiters oder null
+ */
+export async function findEmployeeByEmail(email: string): Promise<string | null> {
+  if (!(await isDataverseConfigured())) {
+    console.warn("Dataverse nicht konfiguriert - kann Mitarbeiter nicht suchen");
+    return null;
+  }
+
+  try {
+    // OData-Filter für E-Mail-Suche (case-insensitive)
+    const filter = `$filter=cr6df_email eq '${email}'`;
+    const select = "$select=cr6df_sgsw_mitarbeitendeid,cr6df_name,cr6df_email";
+    const url = `${DATAVERSE_URL}/api/data/v9.2/${EMPLOYEE_TABLE_NAME}?${filter}&${select}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: await createHeaders(),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`Mitarbeitersuche fehlgeschlagen: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.value && data.value.length > 0) {
+      // Ersten passenden Mitarbeiter zurückgeben
+      return data.value[0].cr6df_sgsw_mitarbeitendeid;
+    }
+
+    console.warn(`Kein Mitarbeiter gefunden für E-Mail: ${email}`);
+    return null;
+  } catch (error) {
+    console.error("Fehler bei Mitarbeitersuche:", error);
+    return null;
+  }
+}
+
+/**
  * Erstellt eine neue Idee in Dataverse.
  * 
  * @param input - Titel und Beschreibung der neuen Idee
  * @param submittedBy - Name des einreichenden Users
+ * @param userEmail - E-Mail des einreichenden Users (für Ideengeber-Zuordnung)
  */
 export async function createIdea(
   input: CreateIdeaInput,
-  submittedBy: string
+  submittedBy: string,
+  userEmail?: string
 ): Promise<Idea> {
   // Fallback: Mock-Erstellung, wenn nicht konfiguriert
   if (!(await isDataverseConfigured())) {
@@ -453,14 +508,28 @@ export async function createIdea(
 
   const url = `${DATAVERSE_URL}/api/data/v9.2/${TABLE_NAME}`;
 
-  // Nur editierbare Felder senden
-  // createdby wird automatisch von Dataverse gesetzt (aktueller User des Tokens)
-  const body = {
+  // Ideengeber anhand E-Mail suchen (falls vorhanden)
+  let ideengeberId: string | null = null;
+  if (userEmail) {
+    ideengeberId = await findEmployeeByEmail(userEmail);
+    if (ideengeberId) {
+      console.log(`Ideengeber gefunden: ${ideengeberId} für ${userEmail}`);
+    }
+  }
+
+  // Body für Dataverse erstellen
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body: Record<string, any> = {
     [FIELD_MAP.title]: input.title,
     [FIELD_MAP.description]: input.description,
     [FIELD_MAP.type]: 562520000, // Default-Typ: "Idee" (numerischer Wert für Dataverse OptionSet)
-    // submittedBy wird NICHT gesendet - Dataverse setzt createdby automatisch
   };
+  
+  // Ideengeber als Lookup setzen (falls gefunden)
+  // Dataverse Lookup-Syntax: "feldname@odata.bind": "/entitysetname(guid)"
+  if (ideengeberId) {
+    body["cr6df_ideengeber@odata.bind"] = `/${EMPLOYEE_TABLE_NAME}(${ideengeberId})`;
+  }
 
   const response = await fetch(url, {
     method: "POST",
@@ -502,13 +571,16 @@ export async function createIdea(
 
 /**
  * Aktualisiert die Beschreibung einer bestehenden Idee.
+ * Bei Status "in Überarbeitung" wird automatisch auf "eingereicht" zurückgesetzt.
  * 
  * @param id - Die GUID der Idee
  * @param description - Die neue Beschreibung
+ * @param currentStatus - Der aktuelle Lifecycle-Status (optional)
  */
 export async function updateIdeaDescription(
   id: string,
-  description: string
+  description: string,
+  currentStatus?: string
 ): Promise<void> {
   // Mock-Update, wenn nicht konfiguriert
   if (!(await isDataverseConfigured())) {
@@ -518,9 +590,17 @@ export async function updateIdeaDescription(
 
   const url = `${DATAVERSE_URL}/api/data/v9.2/${TABLE_NAME}(${id})`;
 
-  const body = {
+  // Body mit Beschreibung
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body: Record<string, any> = {
     [FIELD_MAP.description]: description,
   };
+  
+  // Bei Status "in Überarbeitung" automatisch auf "eingereicht" zurücksetzen
+  if (currentStatus === "in Überarbeitung") {
+    body[FIELD_MAP.status] = 562520000; // "eingereicht"
+    console.log("Status wird von 'in Überarbeitung' auf 'eingereicht' zurückgesetzt");
+  }
 
   const response = await fetch(url, {
     method: "PATCH",

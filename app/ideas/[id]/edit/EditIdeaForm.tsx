@@ -19,12 +19,14 @@ type EditIdeaFormProps = {
   ideaId: string;
   currentTitle: string;
   currentDescription: string;
+  currentStatus?: string; // Für automatischen Status-Reset bei "in Überarbeitung"
 };
 
 export default function EditIdeaForm({
   ideaId,
   currentTitle,
   currentDescription,
+  currentStatus,
 }: EditIdeaFormProps) {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -46,7 +48,8 @@ export default function EditIdeaForm({
   const onSubmit = async (data: EditIdeaInput) => {
     setSubmitError(null);
 
-    const result = await updateIdea(ideaId, data);
+    // Status übergeben für automatischen Reset bei "in Überarbeitung"
+    const result = await updateIdea(ideaId, data, currentStatus);
 
     if (result.success) {
       setSubmitSuccess(true);
