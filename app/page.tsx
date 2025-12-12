@@ -1,7 +1,7 @@
 /**
  * page.tsx (Startseite)
  * 
- * Die Landing Page der Idea2Solution Plattform.
+ * Die Landing Page des Ideen-Portals der St. Galler Stadtwerke.
  * Zeigt eine kurze Einführung und Call-to-Action Buttons.
  */
 
@@ -15,9 +15,12 @@ export default function Home() {
         <div className="max-w-2xl">
           {/* Hauptüberschrift */}
           <h1 className="text-4xl font-bold sm:text-5xl">
-            Willkommen bei{" "}
-            <span className="text-primary">Idea2Solution</span>
+            Willkommen beim{" "}
+            <span className="text-primary">Ideen-Portal</span>
           </h1>
+          <p className="text-lg text-base-content/60 mt-2">
+            der St. Galler Stadtwerke
+          </p>
 
           {/* Beschreibung */}
           <p className="py-6 text-lg text-base-content/70">

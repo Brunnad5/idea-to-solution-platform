@@ -23,9 +23,9 @@ const geistMono = Geist_Mono({
 
 // Metadaten für SEO und Browser-Tab
 export const metadata: Metadata = {
-  title: "Idea2Solution | Digitalisierungsideen einreichen",
+  title: "Ideen-Portal | St. Galler Stadtwerke",
   description:
-    "Plattform zum Einreichen und Verfolgen von Digitalisierungsideen für interne Mitarbeitende.",
+    "Plattform zum Einreichen und Verfolgen von Digitalisierungsideen für Mitarbeitende der St. Galler Stadtwerke.",
 };
 
 export default function RootLayout({

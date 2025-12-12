@@ -9,9 +9,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Lightbulb, Menu, Plus } from "lucide-react";
+import { Menu, Plus } from "lucide-react";
 import UserMenu from "./UserMenu";
 import ThemeSwitcher from "./ThemeSwitcher";
+import SgswLogo from "./SgswLogo";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -59,8 +60,8 @@ export default function Navbar() {
 
         {/* App-Logo und Name */}
         <Link href="/" className="btn btn-ghost text-xl gap-2">
-          <Lightbulb className="h-6 w-6 text-primary" />
-          <span className="hidden sm:inline">Idea2Solution</span>
+          <SgswLogo width={28} height={28} />
+          <span className="hidden sm:inline">Ideen-Portal</span>
         </Link>
       </div>
 
