@@ -16,11 +16,8 @@ export default function Home() {
           {/* Hauptüberschrift */}
           <h1 className="text-4xl font-bold sm:text-5xl">
             Willkommen beim{" "}
-            <span className="text-primary">Ideen-Portal</span>
+            <span className="text-primary">sgsw Ideen-Portal</span>
           </h1>
-          <p className="text-lg text-base-content/60 mt-2">
-            der St. Galler Stadtwerke
-          </p>
 
           {/* Beschreibung */}
           <p className="py-6 text-lg text-base-content/70">

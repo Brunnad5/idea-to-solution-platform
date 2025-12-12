@@ -9,7 +9,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Plus } from "lucide-react";
+import { Menu, Plus, Settings2 } from "lucide-react";
 import UserMenu from "./UserMenu";
 import ThemeSwitcher from "./ThemeSwitcher";
 import SgswLogo from "./SgswLogo";
@@ -55,6 +55,11 @@ export default function Navbar() {
                 Neue Idee
               </Link>
             </li>
+            <li>
+              <Link href="/admin/fields" className={linkClass("/admin")}>
+                Admin
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -80,6 +85,15 @@ export default function Navbar() {
             >
               <Plus className="h-4 w-4" />
               Neue Idee
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/admin/fields"
+              className={`gap-1 ${linkClass("/admin")}`}
+            >
+              <Settings2 className="h-4 w-4" />
+              Admin
             </Link>
           </li>
         </ul>
