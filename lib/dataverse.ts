@@ -316,6 +316,61 @@ export async function isDataverseConfigured(): Promise<boolean> {
   return Boolean(token);
 }
 
+/**
+ * Debug-Info für Dataverse-Konfiguration.
+ * Zeigt an, welche Umgebungsvariablen gesetzt sind und warum die Verbindung fehlschlägt.
+ */
+export async function getDataverseDebugInfo(): Promise<{
+  isConfigured: boolean;
+  hasUrl: boolean;
+  hasToken: boolean;
+  urlPreview: string;
+  tokenPreview: string;
+  errorDetails?: string;
+}> {
+  const hasUrl = Boolean(DATAVERSE_URL);
+  const token = await getAccessToken();
+  const hasToken = Boolean(token);
+  
+  // URL-Preview (nur Domain zeigen)
+  let urlPreview = "nicht gesetzt";
+  if (DATAVERSE_URL) {
+    try {
+      const url = new URL(DATAVERSE_URL);
+      urlPreview = url.hostname;
+    } catch {
+      urlPreview = "ungültiges Format";
+    }
+  }
+  
+  // Token-Preview (nur erste/letzte Zeichen)
+  let tokenPreview = "nicht gesetzt";
+  if (token) {
+    if (token.length > 20) {
+      tokenPreview = `${token.substring(0, 8)}...${token.substring(token.length - 8)} (${token.length} Zeichen)`;
+    } else {
+      tokenPreview = `${token.length} Zeichen (zu kurz?)`;
+    }
+  }
+  
+  // Fehlerdetails ermitteln
+  let errorDetails: string | undefined;
+  if (!hasUrl) {
+    errorDetails = "DATAVERSE_URL fehlt in Umgebungsvariablen";
+  } else if (!hasToken) {
+    errorDetails = "DATAVERSE_ACCESS_TOKEN fehlt in Umgebungsvariablen";
+  }
+  
+  return {
+    isConfigured: hasUrl && hasToken,
+    hasUrl,
+    hasToken,
+    urlPreview,
+    tokenPreview,
+    errorDetails,
+  };
+}
+
 // ============================================
 // CRUD-OPERATIONEN
 // ============================================

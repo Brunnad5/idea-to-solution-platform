@@ -7,38 +7,16 @@
  */
 
 import Link from "next/link";
-import { fetchAllIdeas, isDataverseConfigured } from "@/lib/dataverse";
-import { AlertCircle, Edit3, Lightbulb } from "lucide-react";
+import { fetchAllIdeas, getDataverseDebugInfo } from "@/lib/dataverse";
+import { Edit3, Lightbulb } from "lucide-react";
 import IdeasList from "@/components/IdeasList";
-
-// Komponente: Hinweis wenn Dataverse nicht konfiguriert
-function DataverseHint({ hasError = false }: { hasError?: boolean }) {
-  let title = "Demo-Modus aktiv";
-  let message = "Dataverse ist nicht konfiguriert oder kein Token vorhanden. Es werden Mock-Daten angezeigt. Klicke auf 'Verbinden' um einen Token einzugeben.";
-  let alertType = "alert-info";
-
-  if (hasError) {
-    title = "Dataverse-Verbindung fehlgeschlagen";
-    message = "Die Verbindung zu Dataverse ist fehlgeschlagen. Prüfe ob der Token noch gültig ist und gib ggf. einen neuen ein.";
-    alertType = "alert-warning";
-  }
-
-  return (
-    <div className={`alert ${alertType} mb-6`}>
-      <AlertCircle className="h-5 w-5" />
-      <div>
-        <h3 className="font-bold">{title}</h3>
-        <p className="text-sm">{message}</p>
-      </div>
-    </div>
-  );
-}
+import DataverseDebugInfo from "@/components/DataverseDebugInfo";
 
 // Hauptkomponente: Die Seite
 export default async function IdeasPage() {
   // Ideen laden (aus Dataverse oder Mock-Daten)
   const ideas = await fetchAllIdeas();
-  const isConfigured = await isDataverseConfigured();
+  const debugInfo = await getDataverseDebugInfo();
   
   // Anzahl Ideen zur Überarbeitung zählen
   const revisionCount = ideas.filter((idea) => idea.status === "in Überarbeitung").length;
@@ -69,8 +47,8 @@ export default async function IdeasPage() {
         </div>
       </div>
 
-      {/* Hinweis wenn Demo-Modus */}
-      {!isConfigured && <DataverseHint />}
+      {/* Debug-Info wenn Dataverse nicht konfiguriert */}
+      <DataverseDebugInfo debugInfo={debugInfo} />
 
       {/* Ideen-Liste mit Filter (Client Component) */}
       {ideas.length > 0 ? (
