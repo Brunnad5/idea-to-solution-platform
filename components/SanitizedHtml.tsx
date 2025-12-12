@@ -3,11 +3,14 @@
  * 
  * Client Component zur sicheren Anzeige von HTML-Inhalten aus Dataverse.
  * Verwendet DOMPurify zur Bereinigung und behält harmlose Formatierungen bei.
+ * 
+ * Hinweis: Verwendet "dompurify" (nur Client) statt "isomorphic-dompurify" 
+ * wegen Vercel Serverless-Kompatibilität (jsdom-Problem).
  */
 
 "use client";
 
-import DOMPurify from "isomorphic-dompurify";
+import DOMPurify from "dompurify";
 
 interface SanitizedHtmlProps {
   html: string | undefined | null;

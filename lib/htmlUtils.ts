@@ -2,13 +2,14 @@
  * htmlUtils.ts
  * 
  * Utility-Funktionen zur Verarbeitung von HTML-Text aus Dataverse.
+ * Server-kompatibel (ohne jsdom/DOMPurify für Server-seitiges Rendering).
  */
-
-import DOMPurify from "isomorphic-dompurify";
 
 /**
  * Entfernt alle HTML-Tags aus einem Text und gibt nur Plain Text zurück.
  * Nützlich für Vorschauen/Previews wo keine HTML-Formatierung gewünscht ist.
+ * 
+ * Server-kompatible Implementierung ohne jsdom.
  * 
  * @param html - HTML-String aus Dataverse
  * @returns Plain Text ohne HTML-Tags
@@ -18,15 +19,21 @@ export function stripHtmlTags(html: string | undefined | null): string {
     return "";
   }
 
-  // DOMPurify mit leeren ALLOWED_TAGS = alle Tags entfernen
-  const cleanText = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: [], // Keine Tags erlauben = nur Text
-    ALLOWED_ATTR: [], // Keine Attribute erlauben
-  });
-
-  // Mehrfache Whitespaces und Zeilenumbrüche aufräumen
-  return cleanText
-    .replace(/\s+/g, " ") // Mehrfache Spaces zu einem
-    .replace(/\n\s*\n/g, "\n") // Mehrfache Zeilenumbrüche zu einem
+  // HTML-Tags entfernen (Server-sicher, ohne DOM)
+  const cleanText = html
+    // Alle HTML-Tags entfernen
+    .replace(/<[^>]*>/g, " ")
+    // HTML-Entities dekodieren
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    // Mehrfache Whitespaces aufräumen
+    .replace(/\s+/g, " ")
     .trim();
+
+  return cleanText;
 }
