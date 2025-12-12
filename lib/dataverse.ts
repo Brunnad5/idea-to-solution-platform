@@ -503,11 +503,18 @@ export async function findEmployeeByEmail(email: string): Promise<string | null>
     return null;
   }
 
+  console.log(`[Ideengeber] Suche Mitarbeiter für E-Mail: ${email}`);
+
   try {
-    // OData-Filter für E-Mail-Suche (case-insensitive)
-    const filter = `$filter=cr6df_email eq '${email}'`;
-    const select = "$select=cr6df_sgsw_mitarbeitendeid,cr6df_name,cr6df_email";
+    // OData-Filter für E-Mail-Suche
+    // ACHTUNG: In Dataverse ist die Spalte vertauscht!
+    // cr6df_vorname enthält die E-Mail (DisplayName: "email")
+    // cr6df_email enthält den Vornamen (DisplayName: "vorname")
+    const filter = `$filter=cr6df_vorname eq '${email}'`;
+    const select = "$select=cr6df_sgsw_mitarbeitendeid,cr6df_vorname,cr6df_nachname";
     const url = `${DATAVERSE_URL}/api/data/v9.2/${EMPLOYEE_TABLE_NAME}?${filter}&${select}`;
+
+    console.log(`[Ideengeber] API-URL: ${url}`);
 
     const response = await fetch(url, {
       method: "GET",
@@ -516,21 +523,25 @@ export async function findEmployeeByEmail(email: string): Promise<string | null>
     });
 
     if (!response.ok) {
-      console.error(`Mitarbeitersuche fehlgeschlagen: ${response.status}`);
+      const errorText = await response.text().catch(() => "");
+      console.error(`[Ideengeber] Mitarbeitersuche fehlgeschlagen: ${response.status}`, errorText);
       return null;
     }
 
     const data = await response.json();
+    console.log(`[Ideengeber] Antwort:`, JSON.stringify(data, null, 2));
     
     if (data.value && data.value.length > 0) {
-      // Ersten passenden Mitarbeiter zurückgeben
-      return data.value[0].cr6df_sgsw_mitarbeitendeid;
+      const employeeId = data.value[0].cr6df_sgsw_mitarbeitendeid;
+      const employeeName = data.value[0].cr6df_nachname; // Nachname als Anzeigename
+      console.log(`[Ideengeber] Mitarbeiter gefunden: ${employeeName} (${employeeId})`);
+      return employeeId;
     }
 
-    console.warn(`Kein Mitarbeiter gefunden für E-Mail: ${email}`);
+    console.warn(`[Ideengeber] Kein Mitarbeiter gefunden für E-Mail: ${email}`);
     return null;
   } catch (error) {
-    console.error("Fehler bei Mitarbeitersuche:", error);
+    console.error("[Ideengeber] Fehler bei Mitarbeitersuche:", error);
     return null;
   }
 }
@@ -566,10 +577,10 @@ export async function createIdea(
   // Ideengeber anhand E-Mail suchen (falls vorhanden)
   let ideengeberId: string | null = null;
   if (userEmail) {
+    console.log(`[CreateIdea] Suche Ideengeber für E-Mail: ${userEmail}`);
     ideengeberId = await findEmployeeByEmail(userEmail);
-    if (ideengeberId) {
-      console.log(`Ideengeber gefunden: ${ideengeberId} für ${userEmail}`);
-    }
+  } else {
+    console.log("[CreateIdea] Keine userEmail übergeben - Ideengeber wird nicht gesetzt");
   }
 
   // Body für Dataverse erstellen
@@ -583,8 +594,14 @@ export async function createIdea(
   // Ideengeber als Lookup setzen (falls gefunden)
   // Dataverse Lookup-Syntax: "feldname@odata.bind": "/entitysetname(guid)"
   if (ideengeberId) {
-    body["cr6df_ideengeber@odata.bind"] = `/${EMPLOYEE_TABLE_NAME}(${ideengeberId})`;
+    const lookupValue = `/${EMPLOYEE_TABLE_NAME}(${ideengeberId})`;
+    body["cr6df_ideengeber@odata.bind"] = lookupValue;
+    console.log(`[CreateIdea] Ideengeber wird gesetzt: ${lookupValue}`);
+  } else {
+    console.log("[CreateIdea] Kein Ideengeber gefunden - Feld bleibt leer");
   }
+  
+  console.log("[CreateIdea] Request Body:", JSON.stringify(body, null, 2));
 
   const response = await fetch(url, {
     method: "POST",
