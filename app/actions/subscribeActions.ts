@@ -2,11 +2,14 @@
  * subscribeActions.ts
  * 
  * Server Actions für das Abonnieren/Deabonnieren von Ideen.
+ * Verwendet die E-Mail-basierte Mitarbeitersuche (wie bei Ideengeber).
  */
 
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { findEmployeeByEmail } from "@/lib/dataverse";
+import { getCurrentUserAsync } from "@/lib/auth";
 
 const DATAVERSE_URL = process.env.DATAVERSE_URL || "";
 const TABLE_NAME = "cr6df_sgsw_digitalisierungsvorhabens";
@@ -29,88 +32,6 @@ async function getAccessToken(): Promise<string | null> {
   } catch (error) {
     console.error("[TOKEN] Fehler beim Token-Zugriff:", error);
     return process.env.DATAVERSE_ACCESS_TOKEN || null;
-  }
-}
-
-/**
- * Findet die Mitarbeiter-ID anhand der Azure AD Object ID.
- * Prüft ob der User sowohl als SystemUser als auch in cr6df_sgsw_mitarbeitendes existiert.
- * 
- * @param azureAdObjectId - Die Azure AD Object ID aus dem Auth Token
- * @returns Mitarbeiter GUID aus cr6df_sgsw_mitarbeitendes oder null
- */
-async function getMitarbeiterIdFromAzureId(
-  azureAdObjectId: string
-): Promise<{ mitarbeiterId: string | null; error?: string }> {
-  try {
-    const token = await getAccessToken();
-    if (!token) {
-      console.error("[MITARBEITER] Kein Access Token verfügbar");
-      return { mitarbeiterId: null, error: "Kein Access Token" };
-    }
-
-    // Schritt 1: Azure AD ID -> SystemUser GUID
-    const systemUserUrl = `${DATAVERSE_URL}/api/data/v9.2/systemusers?` +
-      `$select=systemuserid` +
-      `&$filter=azureactivedirectoryobjectid eq '${azureAdObjectId}'`;
-
-    console.log("[MITARBEITER] SystemUser Lookup:", systemUserUrl);
-
-    const systemUserResponse = await fetch(systemUserUrl, {
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "OData-MaxVersion": "4.0",
-        "OData-Version": "4.0",
-        "Accept": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!systemUserResponse.ok) {
-      const errorText = await systemUserResponse.text();
-      console.error(`[MITARBEITER] SystemUser Fehler ${systemUserResponse.status}:`, errorText);
-      return { mitarbeiterId: null, error: "SystemUser nicht gefunden" };
-    }
-
-    const systemUserData = await systemUserResponse.json();
-    
-    if (!systemUserData.value || systemUserData.value.length === 0) {
-      console.warn(`[MITARBEITER] Kein SystemUser für Azure AD ID ${azureAdObjectId}`);
-      return { mitarbeiterId: null, error: "Du bist nicht in Dataverse authentifiziert" };
-    }
-
-    const systemUserId = systemUserData.value[0].systemuserid;
-    console.log(`[MITARBEITER] SystemUser gefunden: ${systemUserId}`);
-
-    // Schritt 2: Prüfe ob Mitarbeiter in cr6df_sgsw_mitarbeitendes existiert
-    const mitarbeiterUrl = `${DATAVERSE_URL}/api/data/v9.2/cr6df_sgsw_mitarbeitendes(${systemUserId})`;
-    
-    console.log("[MITARBEITER] Mitarbeiter Lookup:", mitarbeiterUrl);
-
-    const mitarbeiterResponse = await fetch(mitarbeiterUrl, {
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "OData-MaxVersion": "4.0",
-        "OData-Version": "4.0",
-        "Accept": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!mitarbeiterResponse.ok) {
-      console.warn(`[MITARBEITER] Nicht in Mitarbeiter-Tabelle: ${mitarbeiterResponse.status}`);
-      return { 
-        mitarbeiterId: null, 
-        error: "Du musst zuerst als Mitarbeiter in Dataverse angelegt werden. Bitte kontaktiere einen Administrator." 
-      };
-    }
-
-    console.log(`[MITARBEITER] ✅ Mitarbeiter-Eintrag existiert: ${systemUserId}`);
-    return { mitarbeiterId: systemUserId };
-    
-  } catch (error) {
-    console.error("[MITARBEITER] Fehler:", error);
-    return { mitarbeiterId: null, error: "Technischer Fehler beim Lookup" };
   }
 }
 
@@ -189,25 +110,41 @@ export async function setSubscriber(
 
 /**
  * Abonniert den aktuellen User zu einer Idee.
+ * Verwendet E-Mail-basierte Mitarbeitersuche (wie bei Ideengeber).
  * 
  * @param ideaId - Die GUID der Idee
- * @param azureAdObjectId - Die Azure AD Object ID des Users (aus Auth Token)
+ * @param ideengeberId - Die GUID des Ideengebers (optional, für Prüfung)
  */
 export async function subscribeToIdea(
   ideaId: string,
-  azureAdObjectId: string
-): Promise<{ success: boolean; error?: string }> {
-  // Azure AD ID -> Mitarbeiter ID (mit Existenz-Check)
-  const result = await getMitarbeiterIdFromAzureId(azureAdObjectId);
+  ideengeberId?: string
+): Promise<{ success: boolean; error?: string; isIdeengeber?: boolean }> {
+  // Aktuellen User holen (aus Token oder ENV)
+  const currentUser = await getCurrentUserAsync();
+  console.log(`[Subscribe] User: ${currentUser.email} (Source: ${currentUser.source})`);
   
-  if (!result.mitarbeiterId) {
+  // Mitarbeiter anhand E-Mail suchen
+  const mitarbeiterId = await findEmployeeByEmail(currentUser.email);
+  
+  if (!mitarbeiterId) {
     return { 
       success: false, 
-      error: result.error || "Mitarbeiter konnte nicht gefunden werden" 
+      error: `Kein Mitarbeiter gefunden für E-Mail: ${currentUser.email}. Bitte kontaktiere einen Administrator.` 
     };
   }
   
-  return setSubscriber(ideaId, result.mitarbeiterId);
+  // Prüfen ob User der Ideengeber ist
+  if (ideengeberId && mitarbeiterId === ideengeberId) {
+    console.log(`[Subscribe] User ist Ideengeber - Abonnieren nicht notwendig`);
+    return {
+      success: false,
+      error: "Abonnieren nicht notwendig. Als Ideengeber bist du automatisch für Updates abonniert.",
+      isIdeengeber: true,
+    };
+  }
+  
+  console.log(`[Subscribe] Setze Abonnent: ${mitarbeiterId}`);
+  return setSubscriber(ideaId, mitarbeiterId);
 }
 
 /**

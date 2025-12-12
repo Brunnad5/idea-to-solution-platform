@@ -187,6 +187,10 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
   const subscriber = record[FIELD_MAP.subscriberName] as string | undefined;
   const subscriberId = record[FIELD_MAP.subscriber] as string | undefined;
 
+  // Ideengeber: Lookup auf Mitarbeiter-Tabelle
+  const ideengeberId = record[FIELD_MAP.ideengeberId] as string | undefined;
+  const ideengeberName = record[FIELD_MAP.ideengeberName] as string | undefined;
+
   // Initialprüfungs-Felder (können OptionSets sein, daher FormattedValue verwenden)
   const initialReviewReason = record[FIELD_MAP.initialReviewReason] as string | undefined;
   const complexity = record[`${FIELD_MAP.complexity}@OData.Community.Display.V1.FormattedValue`] as string | undefined
@@ -222,6 +226,8 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
     description: record[FIELD_MAP.description] as string,
     submittedBy,
     submittedById,
+    ideengeberId,
+    ideengeberName,
     type,
     status,
     responsiblePerson,

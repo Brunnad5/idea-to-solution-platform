@@ -635,7 +635,8 @@ export default async function IdeaDetailPage({ params }: PageProps) {
                   ideaId={id}
                   subscriber={idea.subscriber}
                   subscriberId={idea.subscriberId}
-                  submittedBy={idea.submittedBy}
+                  ideengeberId={idea.ideengeberId}
+                  ideengeberName={idea.ideengeberName}
                 />
               </div>
             </div>

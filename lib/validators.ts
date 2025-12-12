@@ -77,6 +77,8 @@ export const ideaSchema = z.object({
   submittedBy: z.string(), // Name des Einreichers (aus MS Account)
   submittedById: z.string().optional(), // Azure AD Object ID des Einreichers (für Besitzer-Prüfung)
   submittedByEmail: z.string().email().optional(), // E-Mail für Vergleiche
+  ideengeberId: z.string().optional(), // GUID des Ideengebers (Lookup auf Mitarbeiter)
+  ideengeberName: z.string().optional(), // Name des Ideengebers
   type: z.string().optional(), // Typ (vom System gesetzt)
   status: ideaStatusSchema, // Aktueller Lifecycle-Status
   bpfStatus: z.string().optional(), // Business Process Flow Status
