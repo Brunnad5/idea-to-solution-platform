@@ -16,22 +16,31 @@ const EMPLOYEE_TABLE_NAME = "cr6df_sgsw_mitarbeitendes";
 
 /**
  * Holt den Access Token (aus Cookie oder ENV)
- * Priorisiert ENV für Server Actions (stabiler)
+ * Priorisiert Cookie-Token (ist frisch vom User), dann ENV als Fallback
  */
 async function getAccessToken(): Promise<string | null> {
   try {
-    // Direkt aus ENV lesen - stabiler für Server Actions
-    if (process.env.DATAVERSE_ACCESS_TOKEN) {
-      return process.env.DATAVERSE_ACCESS_TOKEN;
-    }
-    
-    // Fallback: Cookie probieren (funktioniert nicht immer in Server Actions)
+    // Cookie zuerst probieren - ist der frische Token vom User
     const { cookies } = await import("next/headers");
     const cookieStore = await cookies();
     const tokenFromCookie = cookieStore.get("dataverse_token")?.value;
-    return tokenFromCookie || null;
+    
+    if (tokenFromCookie) {
+      console.log("[Subscribe] Token aus Cookie verwendet");
+      return tokenFromCookie;
+    }
+    
+    // Fallback: ENV-Variable (kann veraltet sein)
+    if (process.env.DATAVERSE_ACCESS_TOKEN) {
+      console.log("[Subscribe] Token aus ENV verwendet (Fallback)");
+      return process.env.DATAVERSE_ACCESS_TOKEN;
+    }
+    
+    console.warn("[Subscribe] Kein Token verfügbar");
+    return null;
   } catch (error) {
-    console.error("[TOKEN] Fehler beim Token-Zugriff:", error);
+    console.error("[TOKEN] Fehler beim Cookie-Zugriff:", error);
+    // Bei Cookie-Fehler: ENV als Fallback
     return process.env.DATAVERSE_ACCESS_TOKEN || null;
   }
 }
