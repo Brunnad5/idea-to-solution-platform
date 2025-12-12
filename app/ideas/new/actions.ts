@@ -8,9 +8,8 @@
 
 "use server";
 
-import { redirect } from "next/navigation";
 import { createIdea } from "@/lib/dataverse";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUserAsync } from "@/lib/auth";
 import { createIdeaSchema, CreateIdeaInput } from "@/lib/validators";
 
 /**
@@ -36,8 +35,9 @@ export async function submitIdea(data: CreateIdeaInput): Promise<{
       return { success: false, error: errors };
     }
 
-    // Aktuellen User holen (Mock-User im Prototyp)
-    const currentUser = getCurrentUser();
+    // Aktuellen User holen (aus Token oder ENV-Variable)
+    const currentUser = await getCurrentUserAsync();
+    console.log(`[SubmitIdea] User: ${currentUser.name} <${currentUser.email}> (Source: ${currentUser.source})`);
 
     // Idee in Dataverse erstellen (mit E-Mail für Ideengeber-Zuordnung)
     const newIdea = await createIdea(
