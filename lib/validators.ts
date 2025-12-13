@@ -112,6 +112,7 @@ export const ideaSchema = z.object({
   // Abschluss-Datum
   completedOn: z.string().optional(), // Abgeschlossen am
   rejectedOn: z.string().optional(), // Abgelehnt am
+  rejectionReason: z.string().optional(), // Ablehnungsgrund (RichText)
 });
 
 // ============================================

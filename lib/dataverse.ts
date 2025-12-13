@@ -94,6 +94,7 @@ const FIELD_MAP = {
   // Abschluss
   completedOn: "cr6df_abgeschlossen_am",
   rejectedOn: "cr6df_abgelehnt_am",
+  rejectionReason: "cr6df_ablehnungsgrund", // Memo-Feld (RichText)
 } as const;
 
 /**
@@ -219,6 +220,7 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
   // Abschluss-Felder
   const completedOn = record[FIELD_MAP.completedOn] as string | undefined;
   const rejectedOn = record[FIELD_MAP.rejectedOn] as string | undefined;
+  const rejectionReason = record[FIELD_MAP.rejectionReason] as string | undefined;
 
   return {
     id: record[FIELD_MAP.id] as string,
@@ -255,6 +257,7 @@ function mapDataverseToIdea(record: Record<string, unknown>): Idea {
     // Abschluss
     completedOn,
     rejectedOn,
+    rejectionReason,
   };
 }
 

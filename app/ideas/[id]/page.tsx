@@ -530,6 +530,85 @@ function PlanningSection({ idea }: { idea: Idea }) {
   );
 }
 
+// Abschluss-Abschnitt (für Status "abgelehnt" oder "abgeschlossen")
+function CompletionSection({ idea }: { idea: Idea }) {
+  const isRejected = idea.status === "abgelehnt";
+  const isCompleted = idea.status === "abgeschlossen";
+  
+  // Nur anzeigen wenn abgelehnt oder abgeschlossen
+  if (!isRejected && !isCompleted) {
+    return null;
+  }
+
+  // Hilfsfunktion für Datumsformatierung
+  const formatCompletionDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("de-CH", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  return (
+    <CollapsibleSection 
+      title={isRejected ? "Ablehnung" : "Abschluss"} 
+      icon={isRejected 
+        ? <MessageSquare className="h-5 w-5 text-error" />
+        : <Check className="h-5 w-5 text-success" />
+      }
+      defaultOpen={true}
+    >
+      <div className="space-y-4 pt-2">
+        {/* Abgelehnt am / Abgeschlossen am */}
+        {(isRejected && idea.rejectedOn) && (
+          <div className="flex items-center gap-3">
+            <div className="bg-error/10 p-2 rounded-lg">
+              <Calendar className="h-5 w-5 text-error" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Abgelehnt am</p>
+              <p className="font-medium">{formatCompletionDate(idea.rejectedOn)}</p>
+            </div>
+          </div>
+        )}
+
+        {(isCompleted && idea.completedOn) && (
+          <div className="flex items-center gap-3">
+            <div className="bg-success/10 p-2 rounded-lg">
+              <Calendar className="h-5 w-5 text-success" />
+            </div>
+            <div>
+              <p className="text-xs text-base-content/60">Abgeschlossen am</p>
+              <p className="font-medium">{formatCompletionDate(idea.completedOn)}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Ablehnungsgrund (nur bei abgelehnt) */}
+        {isRejected && idea.rejectionReason && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare className="h-4 w-4 text-error" />
+              <p className="text-xs text-base-content/60">Ablehnungsgrund</p>
+            </div>
+            <div className="text-sm bg-error/5 border border-error/20 p-3 rounded-lg">
+              <SanitizedHtml html={idea.rejectionReason} />
+            </div>
+          </div>
+        )}
+
+        {/* Fallback für abgelehnt ohne Grund */}
+        {isRejected && !idea.rejectionReason && !idea.rejectedOn && (
+          <p className="text-sm text-base-content/50 italic">
+            Keine Details zur Ablehnung verfügbar.
+          </p>
+        )}
+      </div>
+    </CollapsibleSection>
+  );
+}
+
 // Props für die Seite (Next.js App Router)
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -597,6 +676,9 @@ export default async function IdeaDetailPage({ params }: PageProps) {
             
             {/* Planung (ab Status "in Planung") */}
             <PlanningSection idea={idea} />
+            
+            {/* Abschluss (bei Status "abgelehnt" oder "abgeschlossen") */}
+            <CompletionSection idea={idea} />
           </div>
 
           {/* Divider */}
