@@ -14,19 +14,24 @@ import { Idea, IdeaStatus, ideaStatusValues } from "@/lib/validators";
 import { stripHtmlTags } from "@/lib/htmlUtils";
 import IdeaFilters from "./IdeaFilters";
 
-// Lifecycle-Status Labels für die Anzeige
-const LIFECYCLE_STATUS_LABELS: Record<IdeaStatus, string> = {
-  "eingereicht": "Eingereicht",
-  "in Qualitätsprüfung": "In Qualitätsprüfung",
-  "in Überarbeitung": "Zur Überarbeitung",
-  "in Detailanalyse": "In Detailanalyse",
-  "ITOT-Board vorgestellt": "ITOT-Board vorgestellt",
-  "Projektportfolio aufgenommen": "In Projektportfolio",
-  "Quartalsplanung aufgenommen": "In Quartalsplanung",
-  "Wochenplanung aufgenommen": "In Wochenplanung",
-  "in Umsetzung": "In Umsetzung",
-  "abgeschlossen": "Abgeschlossen",
-  "abgelehnt": "Abgelehnt",
+// Lifecycle-Status Labels und Farben für die Anzeige
+// Farben basieren auf der BPF-Phase:
+// - Blau (info): Initialisierung
+// - Gelb (warning): Analyse & Bewertung
+// - Violett (secondary): Planung
+// - Grün (success): Umsetzung
+const LIFECYCLE_STATUS_CONFIG: Record<IdeaStatus, { label: string; badgeClass: string }> = {
+  "eingereicht": { label: "Eingereicht", badgeClass: "badge-info" },
+  "in Qualitätsprüfung": { label: "In Qualitätsprüfung", badgeClass: "badge-info" },
+  "in Überarbeitung": { label: "Zur Überarbeitung", badgeClass: "badge-info" },
+  "in Detailanalyse": { label: "In Detailanalyse", badgeClass: "badge-warning" },
+  "ITOT-Board vorgestellt": { label: "ITOT-Board vorgestellt", badgeClass: "badge-warning" },
+  "Projektportfolio aufgenommen": { label: "In Projektportfolio", badgeClass: "badge-secondary" },
+  "Quartalsplanung aufgenommen": { label: "In Quartalsplanung", badgeClass: "badge-secondary" },
+  "Wochenplanung aufgenommen": { label: "In Wochenplanung", badgeClass: "badge-secondary" },
+  "in Umsetzung": { label: "In Umsetzung", badgeClass: "badge-success" },
+  "abgeschlossen": { label: "Abgeschlossen", badgeClass: "badge-success" },
+  "abgelehnt": { label: "Abgelehnt", badgeClass: "badge-error" },
 };
 
 // Die vier BPF-Phasen in der gewünschten Reihenfolge
@@ -132,16 +137,19 @@ function IdeaCard({ idea }: { idea: Idea }) {
   );
 }
 
-// Lifecycle-Status Untergruppe
+// Lifecycle-Status Untergruppe mit farbigem Badge
 function LifecycleStatusGroup({ status, ideas }: { status: IdeaStatus; ideas: Idea[] }) {
   if (ideas.length === 0) return null;
+  
+  const config = LIFECYCLE_STATUS_CONFIG[status];
   
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <h3 className="text-sm font-medium text-base-content/70">
-          {LIFECYCLE_STATUS_LABELS[status]}
-        </h3>
+        {/* Farbiges Status-Label */}
+        <span className={`badge ${config.badgeClass}`}>
+          {config.label}
+        </span>
         <span className="badge badge-sm badge-ghost">{ideas.length}</span>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
