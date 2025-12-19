@@ -66,7 +66,7 @@ export default function Navbar() {
         {/* App-Logo und Name */}
         <Link href="/" className="btn btn-ghost text-xl gap-2">
           <SgswLogo width={28} height={28} />
-          <span className="hidden sm:inline">Ideen-Portal</span>
+          <span className="hidden sm:inline whitespace-nowrap">Ideen-Portal</span>
         </Link>
       </div>
 
